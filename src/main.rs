@@ -1,6 +1,6 @@
 use std::io::{Cursor, Read, Seek};
 
-use dioxus::prelude::{*};
+use dioxus::prelude::*;
 use epub::doc::EpubDoc;
 
 fn main() {
@@ -12,7 +12,7 @@ struct ReaderProps<'a, R: Read + Seek + 'a> {
     doc: &'a UseRef<EpubDoc<R>>,
 }
 
-fn Nav<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
+fn nav_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
     let doc = cx.props.doc;
 
     let page = use_state(&cx, || doc.read().get_current_page());
@@ -23,14 +23,14 @@ fn Nav<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a
         div { "Page {page}/{count}" }
         button {
             onclick: move |_| {
-               _ = doc.write().go_prev();
+               std::mem::drop(doc.write().go_prev());
                page.set(doc.read().get_current_page());
            },
             "Previous"
          }
          button {
              onclick: move |_| {
-                _ = doc.write().go_next();
+                std::mem::drop(doc.write().go_next());
                 page.set(doc.read().get_current_page());
             },
              "Next"
@@ -38,23 +38,26 @@ fn Nav<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a
     })
 }
 
-fn Text<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
+fn text_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
     let doc = cx.props.doc;
 
-    let text = doc.write().get_current_str().unwrap_or("".to_string());
+    let text = doc
+        .write()
+        .get_current_str()
+        .unwrap_or_else(|_| "".to_string());
 
     cx.render(rsx! {
         div { class: "iframe",  dangerous_inner_html: "{text}"  } // TODO: Properly sandbox
     })
 }
 
-fn Reader<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
+fn reader_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
     let doc = cx.props.doc;
 
     cx.render(rsx! {
-        Nav{ doc: doc }
-        Text{ doc: doc }
-        Nav{ doc: doc }
+        crate::nav_component{ doc: doc }
+        crate::text_component{ doc: doc }
+        crate::nav_component{ doc: doc }
     })
 }
 
@@ -65,6 +68,6 @@ fn app(cx: Scope) -> Element {
     let doc = use_ref(&cx, || doc);
 
     cx.render(rsx! {
-        Reader{ doc: doc }
+        crate::reader_component{ doc: doc }
     })
 }
