@@ -52,13 +52,12 @@ fn nav_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, NavProps<'a, R>>) -> Ele
 }
 
 #[derive(Props)]
-struct ReaderProps<'a, R: Read + Seek + 'a> {
+struct TextProps<'a, R: Read + Seek + 'a> {
     doc: &'a UseRef<EpubDoc<R>>,
-    dict: &'a Dict,
-    reasons: &'a Reasons,
+    onselect: EventHandler<'a, String>,
 }
 
-fn clicked(dict: &Dict, reasons: &Reasons) {
+fn clicked(onselect: &EventHandler<String>) {
     let sel = web_sys::window().unwrap().get_selection().unwrap().unwrap();
     let n = sel.anchor_node().unwrap();
     let s: String = n
@@ -71,22 +70,12 @@ fn clicked(dict: &Dict, reasons: &Reasons) {
 
     log!("Clicked: {}", s);
 
-    let definitions = get_terms(&s, reasons, dict);
-
-    for d in definitions {
-        log!(
-            "Definition: {} [{}]: {}",
-            d.expression,
-            d.reading,
-            d.entries.first().unwrap().term.glossary.first().unwrap()
-        );
-    }
+    onselect.call(s);
 }
 
-fn text_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
+fn text_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, TextProps<'a, R>>) -> Element<'a> {
     let doc = cx.props.doc;
-    let dict = cx.props.dict;
-    let reasons = cx.props.reasons;
+    let onselect = &cx.props.onselect;
 
     let text = doc
         .write()
@@ -97,21 +86,100 @@ fn text_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) ->
         div {
             // TODO: Properly sandbox / iframe
             dangerous_inner_html: "{text}",
-            onclick: |_| clicked(dict, reasons)
+            onclick: |_| clicked(onselect)
         }
     })
 }
 
-fn reader_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
+#[derive(Props)]
+struct ReaderProps<'a, R: Read + Seek + 'a> {
+    doc: &'a UseRef<EpubDoc<R>>,
+    dict: &'a Dict,
+    reasons: &'a Reasons,
+}
+
+struct Expression {
+    expression: String,
+    reading: String,
+    entries: Vec<DictEntry>,
+}
+
+struct DictEntry {
+    definitions: Vec<String>,
+}
+
+fn lookup<'a>(dict: &'a Dict, reasons: &'a Reasons, s: &str) -> Vec<Expression> {
+    let definitions = get_terms(s, reasons, dict);
+
+    definitions
+        .iter()
+        .map(|d| Expression {
+            expression: d.expression.to_owned(),
+            reading: d.reading.to_owned(),
+            entries: {
+                d.entries
+                    .iter()
+                    .map(|e| DictEntry {
+                        definitions: e
+                            .term
+                            .glossary
+                            .iter()
+                            .map(std::borrow::ToOwned::to_owned)
+                            .collect::<Vec<_>>(),
+                    })
+                    .collect::<Vec<_>>()
+            },
+        })
+        .collect::<Vec<_>>()
+}
+
+fn reader_component<'a, 'b, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
     let doc = cx.props.doc;
     let dict = cx.props.dict;
     let reasons = cx.props.reasons;
 
+    let defs = use_state(&cx, Vec::new);
+
     cx.render(rsx! {
         crate::nav_component{ doc: doc }
-        crate::text_component{ doc: doc, dict: dict, reasons: reasons }
+        crate::text_component{
+            doc: doc,
+            onselect: move |evt: String| defs.set(lookup(dict, reasons, &evt))
+        }
+        crate::definitions_component{ definitions: defs.get() }
         crate::nav_component{ doc: doc }
     })
+}
+
+#[inline_props]
+fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<Expression>) -> Element {
+    cx.render(rsx!(ul{
+        definitions.iter().map(|d| rsx!(
+            li{
+                div{
+                    ruby {
+                        p { "{d.expression}" }
+                        rt{ "{d.reading}" }
+                    }
+                }
+                div{
+                    ol{
+                        d.entries.iter().map(|e| rsx!(
+                            li{
+                                ul{
+                                    e.definitions.iter().map(|s| rsx!(
+                                        p{
+                                            "{s}"
+                                        }
+                                    ))
+                                }
+                            }
+                        ))
+                    }
+                }
+            }
+        ))
+    }))
 }
 
 #[derive(Props)]
@@ -120,6 +188,7 @@ struct RootProps {
     reasons: Reasons,
 }
 
+// TODO: This is obviously bad
 impl PartialEq for RootProps {
     fn eq(&self, _: &Self) -> bool {
         false
@@ -136,7 +205,6 @@ fn app(cx: Scope<RootProps>) -> Element {
     let doc = use_ref(&cx, || doc);
 
     cx.render(rsx! {
-        p { "{dict.index.title}" }
         crate::reader_component{ doc: doc, dict: dict, reasons: reasons }
     })
 }
