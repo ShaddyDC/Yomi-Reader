@@ -1,10 +1,6 @@
-extern crate web_sys;
+mod upload_component;
 
-macro_rules! log {
-        ( $( $t:tt )* ) => {
-            web_sys::console::log_1(&format!( $( $t )* ).into())
-        }
-    }
+extern crate web_sys;
 
 use std::io::{Cursor, Read, Seek};
 
@@ -13,6 +9,8 @@ use epub::doc::EpubDoc;
 use yomi_dict::{deinflect::Reasons, translator::get_terms, Dict};
 
 fn main() {
+    wasm_logger::init(wasm_logger::Config::default());
+
     let dict = include_bytes!("jmdict_english.zip");
     let dict = yomi_dict::read(std::io::Cursor::new(dict)).expect("Dictionary should be readable");
     let reasons = yomi_dict::deinflect::inflection_reasons();
@@ -68,7 +66,7 @@ fn clicked(onselect: &EventHandler<String>) {
         .take(16)
         .collect();
 
-    log!("Clicked: {}", s);
+    log::info!("Clicked: {}", s);
 
     onselect.call(s);
 }
@@ -195,6 +193,22 @@ impl PartialEq for RootProps {
     }
 }
 
+fn upload_component(cx: Scope) -> Element {
+    let text = use_state(&cx, Vec::new);
+    let text = text.clone();
+
+    cx.render(rsx! {
+        upload_component::upload_component{
+            id: "testid",
+            label: "Upload",
+            upload_callback: move |data| {
+                text.set(data);
+                log::info!("Data: {:?}", text.current());
+            }
+        }
+    })
+}
+
 fn app(cx: Scope<RootProps>) -> Element {
     let dict = &cx.props.dict;
     let reasons = &cx.props.reasons;
@@ -205,6 +219,7 @@ fn app(cx: Scope<RootProps>) -> Element {
     let doc = use_ref(&cx, || doc);
 
     cx.render(rsx! {
+        crate::upload_component{}
         crate::reader_component{ doc: doc, dict: dict, reasons: reasons }
     })
 }
