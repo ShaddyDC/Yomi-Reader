@@ -1,3 +1,4 @@
+mod definitions;
 mod nav;
 mod reader;
 mod upload_component;
