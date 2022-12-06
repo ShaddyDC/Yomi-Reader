@@ -6,43 +6,42 @@ use std::io::{Cursor, Read, Seek};
 
 use dioxus::prelude::*;
 use epub::doc::EpubDoc;
-use yomi_dict::{deinflect::Reasons, translator::get_terms, Dict};
+use yomi_dict::{deinflect::Reasons, translator::get_terms};
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
-
-    let dict = include_bytes!("jmdict_english.zip");
-    let dict = yomi_dict::read(std::io::Cursor::new(dict)).expect("Dictionary should be readable");
-    let reasons = yomi_dict::deinflect::inflection_reasons();
-
-    dioxus::web::launch_with_props(app, RootProps { dict, reasons }, |config| config);
+    dioxus::web::launch(app);
 }
 
 #[derive(Props)]
 struct NavProps<'a, R: Read + Seek + 'a> {
-    doc: &'a UseRef<EpubDoc<R>>,
+    doc: &'a UseRef<Option<EpubDoc<R>>>,
 }
 
 fn nav_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, NavProps<'a, R>>) -> Element<'a> {
     let doc = cx.props.doc;
 
-    let page = use_state(&cx, || doc.read().get_current_page());
+    if doc.read().is_none() {
+        return cx.render(rsx! {p{"No document"}});
+    }
 
-    let count = doc.read().get_num_pages();
+    let page = use_state(&cx, || doc.read().as_ref().unwrap().get_current_page());
+
+    let count = doc.read().as_ref().unwrap().get_num_pages();
 
     cx.render(rsx! {
         div { "Page {page}/{count}" }
         button {
             onclick: move |_| {
-               std::mem::drop(doc.write().go_prev());
-               page.set(doc.read().get_current_page());
+               std::mem::drop(doc.write().as_mut().unwrap().go_prev());
+               page.set(doc.read().as_ref().unwrap().get_current_page());
            },
             "Previous"
          }
          button {
              onclick: move |_| {
-                std::mem::drop(doc.write().go_next());
-                page.set(doc.read().get_current_page());
+                std::mem::drop(doc.write().as_mut().unwrap().go_next());
+                page.set(doc.read().as_ref().unwrap().get_current_page());
             },
              "Next"
           }
@@ -51,11 +50,12 @@ fn nav_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, NavProps<'a, R>>) -> Ele
 
 #[derive(Props)]
 struct TextProps<'a, R: Read + Seek + 'a> {
-    doc: &'a UseRef<EpubDoc<R>>,
+    doc: &'a UseRef<Option<EpubDoc<R>>>,
     onselect: EventHandler<'a, String>,
 }
 
 fn clicked(onselect: &EventHandler<String>) {
+    // TODO Breaks on double click
     let sel = web_sys::window().unwrap().get_selection().unwrap().unwrap();
     let n = sel.anchor_node().unwrap();
     let s: String = n
@@ -72,28 +72,29 @@ fn clicked(onselect: &EventHandler<String>) {
 }
 
 fn text_component<'a, R: Read + Seek + 'a>(cx: Scope<'a, TextProps<'a, R>>) -> Element<'a> {
-    let doc = cx.props.doc;
+    let mut doc = cx.props.doc.write();
     let onselect = &cx.props.onselect;
 
-    let text = doc
-        .write()
-        .get_current_str()
-        .unwrap_or_else(|_| "".to_string());
+    if let Some(doc) = &mut *doc {
+        let text = doc.get_current_str().unwrap_or_else(|_| "".to_string());
 
-    cx.render(rsx! {
-        div {
-            // TODO: Properly sandbox / iframe
-            dangerous_inner_html: "{text}",
-            onclick: |_| clicked(onselect)
-        }
-    })
+        cx.render(rsx! {
+            div {
+                // TODO: Properly sandbox / iframe
+                dangerous_inner_html: "{text}",
+                onclick: |_| clicked(onselect)
+            }
+        })
+    } else {
+        cx.render(rsx! {p{"No document"}})
+    }
 }
 
 #[derive(Props)]
 struct ReaderProps<'a, R: Read + Seek + 'a> {
-    doc: &'a UseRef<EpubDoc<R>>,
-    dict: &'a Dict,
-    reasons: &'a Reasons,
+    doc: &'a UseRef<Option<EpubDoc<R>>>,
+    db: &'a UseRef<Option<yomi_dict::db::DB>>,
+    reasons: &'a UseState<Reasons>,
 }
 
 struct Expression {
@@ -106,10 +107,12 @@ struct DictEntry {
     definitions: Vec<String>,
 }
 
-fn lookup<'a>(dict: &'a Dict, reasons: &'a Reasons, s: &str) -> Vec<Expression> {
-    let definitions = get_terms(s, reasons, dict);
+async fn lookup(db: &mut yomi_dict::db::DB, reasons: &Reasons, s: &str) -> Vec<Expression> {
+    log::info!("Lookup");
+    let definitions = get_terms(s, reasons, db).await.unwrap();
+    log::info!("Lookup2: {:?}", definitions);
 
-    definitions
+    let x = definitions
         .iter()
         .map(|d| Expression {
             expression: d.expression.to_owned(),
@@ -128,12 +131,30 @@ fn lookup<'a>(dict: &'a Dict, reasons: &'a Reasons, s: &str) -> Vec<Expression> 
                     .collect::<Vec<_>>()
             },
         })
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+
+    x
+}
+
+async fn set_defs(
+    defs: &UseState<Vec<Expression>>,
+    db: &UseRef<Option<yomi_dict::db::DB>>,
+    reasons: &Reasons,
+    data: &str,
+) {
+    log::info!("Updating defs1");
+    if db.read().is_none() {
+        load_db(db).await;
+    }
+    if db.read().is_some() {
+        log::info!("Updating defs2");
+        defs.set(lookup(db.write().as_mut().unwrap(), reasons, data).await)
+    }
 }
 
 fn reader_component<'a, 'b, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R>>) -> Element<'a> {
     let doc = cx.props.doc;
-    let dict = cx.props.dict;
+    let db = cx.props.db;
     let reasons = cx.props.reasons;
 
     let defs = use_state(&cx, Vec::new);
@@ -142,7 +163,14 @@ fn reader_component<'a, 'b, R: Read + Seek + 'a>(cx: Scope<'a, ReaderProps<'a, R
         crate::nav_component{ doc: doc }
         crate::text_component{
             doc: doc,
-            onselect: move |evt: String| defs.set(lookup(dict, reasons, &evt))
+            onselect: move |evt: String| {
+                let reasons = (reasons).clone();
+                let defs = defs.clone();
+                let db = db.clone();
+                wasm_bindgen_futures::spawn_local(async move{
+                    set_defs(&defs, &db, reasons.get(), &evt).await;
+                });
+            }
         }
         crate::definitions_component{ definitions: defs.get() }
         crate::nav_component{ doc: doc }
@@ -154,6 +182,7 @@ fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<Expression>) -> Ele
     cx.render(rsx!(ul{
         definitions.iter().map(|d| rsx!(
             li{
+                key: "{d.expression}",
                 div{
                     ruby {
                         p { "{d.expression}" }
@@ -167,6 +196,7 @@ fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<Expression>) -> Ele
                                 ul{
                                     e.definitions.iter().map(|s| rsx!(
                                         p{
+                                            key: "{s}", // TODO keys
                                             "{s}"
                                         }
                                     ))
@@ -180,46 +210,102 @@ fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<Expression>) -> Ele
     }))
 }
 
-#[derive(Props)]
-struct RootProps {
-    dict: Dict,
-    reasons: Reasons,
-}
-
-// TODO: This is obviously bad
-impl PartialEq for RootProps {
-    fn eq(&self, _: &Self) -> bool {
-        false
+async fn load_db(db: &UseRef<Option<yomi_dict::db::DB>>) {
+    if db.read().is_none() {
+        db.write()
+            .replace(yomi_dict::db::DB::new("data").await.unwrap());
+        log::info!("Database loaded");
     }
 }
 
-fn upload_component(cx: Scope) -> Element {
-    let text = use_state(&cx, Vec::new);
-    let text = text.clone();
+async fn load_dict(dbc: &UseRef<Option<yomi_dict::db::DB>>, data: Vec<u8>) {
+    log::info!("Start load");
+
+    if dbc.read().is_none() {
+        load_db(dbc).await;
+    }
+    log::info!("Starting");
+    let res = yomi_dict::Dict::new(Cursor::new(&data));
+    log::info!("Read");
+    if let Err(err) = &res {
+        log::info!("Dict res: {:?}", err);
+    }
+    if let Ok(valid_dict) = res {
+        log::info!("loaded");
+
+        dbc.write()
+            .as_mut()
+            .unwrap()
+            .add_dict(valid_dict)
+            .await
+            .unwrap();
+
+        log::info!("Updated dict");
+    }
+}
+
+fn app(cx: Scope) -> Element {
+    let reasons = use_state(&cx, || yomi_dict::deinflect::inflection_reasons());
+
+    let db = use_ref(&cx, || None);
+
+    // Cannot use async init for use_ref directly
+    use_future(&cx, (), |()| {
+        let dbc = db.clone();
+        async move {
+            load_db(&dbc).await;
+        }
+    });
+
+    let doc = use_ref(&cx, || {
+        let window = web_sys::window().expect("should have window");
+        let storage = window
+            .local_storage()
+            .expect("should be able to get storage")
+            .expect("should have storage");
+        let item = storage
+            .get_item("doc")
+            .expect("should be able to access storage")?;
+        let s = base64::decode(item).ok()?;
+
+        EpubDoc::from_reader(Cursor::new(s)).ok()
+    });
+
+    let dbc = db.clone();
+    let docc = doc.clone();
 
     cx.render(rsx! {
         upload_component::upload_component{
-            id: "testid",
-            label: "Upload",
-            upload_callback: move |data| {
-                text.set(data);
-                log::info!("Data: {:?}", text.current());
+            id: "dict_id",
+            label: "Upload Dict",
+            upload_callback: move |data|{
+                let dbc = dbc.clone();
+                log::info!("Init load");
+                wasm_bindgen_futures::spawn_local(async move{load_dict(&dbc, data).await;});
             }
         }
-    })
-}
+        upload_component::upload_component{
+            id: "book_id",
+            label: "Upload book",
+            upload_callback: move |data| {
+                log::info!("Starting");
+                if let Ok(valid_doc) = EpubDoc::from_reader(Cursor::new(data.clone())){
+                    log::info!("got string");
+                    let data = base64::encode(data);
+                    log::info!("got doc");
+                    docc.set(Some(valid_doc));
+                    let window = web_sys::window().expect("should have window");
+                    let storage = window
+                        .local_storage()
+                        .expect("should be able to get storage")
+                        .expect("should have storage");
+                    storage.set_item("doc", &data).ok();
 
-fn app(cx: Scope<RootProps>) -> Element {
-    let dict = &cx.props.dict;
-    let reasons = &cx.props.reasons;
+                    log::info!("Updated doc");
 
-    let file = include_bytes!("test.epub"); // TODO Prevent reloads
-    let doc = EpubDoc::from_reader(Cursor::new(file)).unwrap();
-
-    let doc = use_ref(&cx, || doc);
-
-    cx.render(rsx! {
-        crate::upload_component{}
-        crate::reader_component{ doc: doc, dict: dict, reasons: reasons }
+                }
+            }
+        }
+        crate::reader_component{ doc: doc, db: db, reasons: reasons }
     })
 }
