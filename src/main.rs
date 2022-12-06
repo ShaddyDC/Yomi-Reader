@@ -1,5 +1,6 @@
 mod definitions;
 mod nav;
+mod read_state;
 mod reader;
 mod upload_component;
 mod view;
@@ -10,6 +11,7 @@ use std::io::Cursor;
 
 use dioxus::prelude::*;
 use epub::doc::EpubDoc;
+use read_state::ReaderState;
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
@@ -50,43 +52,54 @@ async fn load_dict(dbc: &UseRef<Option<yomi_dict::db::DB>>, data: Vec<u8>) {
     }
 }
 
-fn load_book(data: Vec<u8>, doc: UseRef<Option<EpubDoc<Cursor<Vec<u8>>>>>) {
-    log::info!("Loading book");
+fn load_doc(data: Vec<u8>, read_state: UseRef<Option<ReaderState>>) {
+    log::info!("Loading document");
 
     let res = EpubDoc::from_reader(Cursor::new(data.clone()));
 
     if let Err(err) = &res {
-        log::error!("Failed to read book with error {:?}", err);
+        log::error!("Failed to read document with error {:?}", err);
         return;
     }
-    if let Ok(book) = res {
-        log::info!("Book read. Attempting to save to storage");
+    if let Ok(doc) = res {
+        log::info!("document read. Attempting to save to storage");
 
         let data = base64::encode(data);
-        doc.set(Some(book));
         let window = web_sys::window().expect("should have window");
         let storage = window
             .local_storage()
             .expect("should be able to get storage")
             .expect("should have storage");
         storage.set_item("doc", &data).ok();
+        storage.set_item("page", "0").ok();
 
-        log::info!("Loaded book");
+        read_state.set(Some(ReaderState::new(doc, 0)));
+
+        log::info!("Loaded document");
     }
 }
 
-fn load_stored_epub() -> Option<EpubDoc<Cursor<Vec<u8>>>> {
+fn load_stored_reader_state() -> Option<ReaderState> {
     let window = web_sys::window().expect("should have window");
     let storage = window
         .local_storage()
         .expect("should be able to get storage")
         .expect("should have storage");
-    let item = storage
+    let doc_string = storage
         .get_item("doc")
         .expect("should be able to access storage")?;
-    let s = base64::decode(item).ok()?;
+    let doc_bytes = base64::decode(doc_string).ok()?;
 
-    EpubDoc::from_reader(Cursor::new(s)).ok()
+    let mut doc = EpubDoc::from_reader(Cursor::new(doc_bytes)).ok()?;
+
+    let page_string = storage
+        .get_item("page")
+        .expect("Should be able to access storage")?;
+    let page = page_string.parse().ok()?;
+
+    doc.set_current_page(page).ok()?;
+
+    Some(ReaderState::new(doc, page))
 }
 
 fn app(cx: Scope) -> Element {
@@ -102,10 +115,10 @@ fn app(cx: Scope) -> Element {
         }
     });
 
-    let doc = use_ref(&cx, load_stored_epub);
+    let read_state = use_ref(&cx, load_stored_reader_state);
 
     let db_tomove = db.clone();
-    let doc_tomove = doc.clone();
+    let read_state_tomove = read_state.clone();
 
     cx.render(rsx! {
         upload_component::upload_component{
@@ -120,9 +133,9 @@ fn app(cx: Scope) -> Element {
             id: "book_id",
             label: "Upload book",
             upload_callback: move |data| {
-                load_book(data, doc_tomove.clone());
+                load_doc(data, read_state_tomove.clone());
             }
         }
-        crate::reader::reader_component{ doc: doc, db: db, reasons: reasons }
+        crate::reader::reader_component{ read_state: read_state, db: db, reasons: reasons }
     })
 }

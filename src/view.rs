@@ -1,13 +1,12 @@
 extern crate web_sys;
 
-use std::io::{Read, Seek};
-
 use dioxus::prelude::*;
-use epub::doc::EpubDoc;
+
+use crate::read_state::ReaderState;
 
 #[derive(Props)]
-pub(crate) struct ViewProps<'a, R: Read + Seek + 'a> {
-    doc: &'a UseRef<Option<EpubDoc<R>>>,
+pub(crate) struct ViewProps<'a> {
+    read_state: &'a UseRef<Option<ReaderState>>,
     onselect: EventHandler<'a, String>,
 }
 
@@ -28,15 +27,17 @@ fn clicked(onselect: &EventHandler<String>) {
     onselect.call(s);
 }
 
-pub(crate) fn view_component<'a, R: Read + Seek + 'a>(
-    cx: Scope<'a, ViewProps<'a, R>>,
-) -> Element<'a> {
-    let mut doc = cx.props.doc.write();
+pub(crate) fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
+    let text = cx
+        .props
+        .read_state
+        .write()
+        .as_mut()
+        .and_then(|state| state.get_text());
+
     let onselect = &cx.props.onselect;
 
-    if let Some(doc) = &mut *doc {
-        let text = doc.get_current_str().unwrap_or_else(|_| "".to_string());
-
+    if let Some(text) = text {
         cx.render(rsx! {
             div {
                 // TODO: Properly sandbox / iframe
