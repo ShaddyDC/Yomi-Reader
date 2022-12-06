@@ -17,22 +17,28 @@ pub(crate) fn reader_component<'a, 'b>(cx: Scope<'a, ReaderProps<'a>>) -> Elemen
     let db = cx.props.db;
     let reasons = cx.props.reasons;
 
-    let defs = use_state(&cx, Vec::new);
+    let definitions = use_state(&cx, Vec::new);
 
-    cx.render(rsx! {
-        crate::nav::nav_component{ read_state: read_state }
-        crate::view::view_component{
-            read_state: read_state,
-            onselect: move |evt: String| {
-                let reasons = reasons.clone();
-                let defs = defs.clone();
-                let db = db.clone();
-                wasm_bindgen_futures::spawn_local(async move{
-                    set_defs(&defs, &db, reasons.get(), &evt).await;
-                });
+    let has_document = read_state.read().is_some();
+
+    if has_document {
+        cx.render(rsx! {
+            crate::nav::nav_component{ read_state: read_state }
+            crate::view::view_component{
+                read_state: read_state,
+                onselect: move |evt: String| {
+                    let reasons = reasons.clone();
+                    let defs = definitions.clone();
+                    let db = db.clone();
+                    wasm_bindgen_futures::spawn_local(async move{
+                        set_defs(&defs, &db, reasons.get(), &evt).await;
+                    });
+                }
             }
-        }
-        crate::definitions::definitions_component{ definitions: defs.get() }
-        crate::nav::nav_component{ read_state: read_state }
-    })
+            crate::definitions::definitions_component{ definitions: definitions.get() }
+            crate::nav::nav_component{ read_state: read_state }
+        })
+    } else {
+        cx.render(rsx! {p{"No document"}})
+    }
 }
