@@ -12,6 +12,7 @@ use std::io::Cursor;
 use dioxus::prelude::*;
 use epub::doc::EpubDoc;
 use read_state::ReaderState;
+use wasm_bindgen::{prelude::Closure, JsCast};
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
@@ -72,8 +73,9 @@ fn load_doc(data: Vec<u8>, read_state: UseRef<Option<ReaderState>>) {
             .expect("should have storage");
         storage.set_item("doc", &data).ok();
         storage.set_item("page", "0").ok();
+        storage.set_item("scroll_top", "0").ok();
 
-        read_state.set(Some(ReaderState::new(doc, 0)));
+        read_state.set(Some(ReaderState::new(doc, 0, 0.0)));
 
         log::info!("Loaded document");
     }
@@ -97,9 +99,37 @@ fn load_stored_reader_state() -> Option<ReaderState> {
         .expect("Should be able to access storage")?;
     let page = page_string.parse().ok()?;
 
+    let scroll_string = storage
+        .get_item("scroll_top")
+        .expect("Should be able to access storage")?;
+    let scroll_top = scroll_string.parse().ok()?;
+
     doc.set_current_page(page).ok()?;
 
-    Some(ReaderState::new(doc, page))
+    Some(ReaderState::new(doc, page, scroll_top))
+}
+
+async fn manage_scroll(read_state: UseRef<Option<ReaderState>>) {
+    let window = web_sys::window().expect("should have window");
+    let document = window.document().expect("should have document");
+
+    if let Some(read_state) = read_state.read().as_ref() {
+        read_state.apply_scroll();
+    }
+
+    let scroll_callback = Closure::<dyn Fn()>::new(move || {
+        if let Some(offset) = window.page_y_offset().ok() {
+            read_state
+                .write()
+                .as_mut()
+                .map(|state| state.set_scroll(offset));
+        } else {
+            log::error!("Couldn't get document offset to get scroll position");
+        }
+    });
+    document.set_onscroll(Some(scroll_callback.as_ref().unchecked_ref()));
+
+    scroll_callback.forget();
 }
 
 fn app(cx: Scope) -> Element {
@@ -116,6 +146,15 @@ fn app(cx: Scope) -> Element {
     });
 
     let read_state = use_ref(&cx, load_stored_reader_state);
+
+    // Set scroll after everything is rendered
+    use_future(&cx, (), |()| {
+        let read_state = read_state.clone();
+
+        async move {
+            manage_scroll(read_state).await;
+        }
+    });
 
     let db_tomove = db.clone();
     let read_state_tomove = read_state.clone();

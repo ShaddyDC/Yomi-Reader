@@ -7,6 +7,7 @@ use epub::doc::EpubDoc;
 pub(crate) struct ReaderState {
     doc: EpubDoc<Cursor<Vec<u8>>>,
     page: usize,
+    scroll_top: f64,
 }
 
 // TODO error checking
@@ -19,9 +20,22 @@ fn save_page(page: usize) {
     storage.set_item("page", &page.to_string()).ok();
 }
 
+fn save_scroll(page: f64) {
+    let window = web_sys::window().expect("should have window");
+    let storage = window
+        .local_storage()
+        .expect("should be able to get storage")
+        .expect("should have storage");
+    storage.set_item("scroll_top", &page.to_string()).ok();
+}
+
 impl ReaderState {
-    pub(crate) fn new(doc: EpubDoc<Cursor<Vec<u8>>>, page: usize) -> ReaderState {
-        ReaderState { doc, page }
+    pub(crate) fn new(doc: EpubDoc<Cursor<Vec<u8>>>, page: usize, scroll_top: f64) -> ReaderState {
+        ReaderState {
+            doc,
+            page,
+            scroll_top,
+        }
     }
 
     pub(crate) fn get_text(&mut self) -> Option<String> {
@@ -40,6 +54,8 @@ impl ReaderState {
         if let Ok(()) = self.doc.go_next() {
             self.page = self.doc.get_current_page();
             save_page(self.page);
+            self.set_scroll(0.0);
+            self.apply_scroll();
         }
     }
 
@@ -47,6 +63,22 @@ impl ReaderState {
         if let Ok(()) = self.doc.go_prev() {
             self.page = self.doc.get_current_page();
             save_page(self.page);
+            self.set_scroll(0.0);
+            self.apply_scroll();
         }
+    }
+
+    // pub(crate) fn get_scroll(&self) -> f64 {
+    //     self.scroll_top
+    // }
+
+    pub(crate) fn set_scroll(&mut self, scroll_top: f64) {
+        self.scroll_top = scroll_top;
+        save_scroll(scroll_top);
+    }
+
+    pub(crate) fn apply_scroll(&self) {
+        let window = web_sys::window().expect("should have window");
+        window.scroll_to_with_x_and_y(0.0, self.scroll_top);
     }
 }

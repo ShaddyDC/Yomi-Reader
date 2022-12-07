@@ -32,6 +32,7 @@ features = [
     "console",
     "Selection",
     "Window",
+    "Document",
     "Blob",
     "Element",
     "HtmlInputElement",
