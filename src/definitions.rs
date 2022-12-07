@@ -4,6 +4,7 @@ use yomi_dict::{
     translator::{get_terms, DictEntries},
 };
 
+// TODO broken ン
 pub(crate) async fn set_defs(
     defs: &UseState<Vec<DictEntries>>,
     db: &UseRef<Option<yomi_dict::db::DB>>,
@@ -40,18 +41,20 @@ pub(crate) fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<DictEntr
                 }
                 div{
                     ol{
-                        d.entries.iter().map(|e| rsx!(
+                        d.entries.iter().map(|e| {
+                            let key = ((e.term.dict_id as u64) << 32) | e.term.sequence as u64;
+                            rsx!(
                             li{
+                                key: "{key}",
                                 ul{
                                     e.term.glossary.iter().map(|s| rsx!(
-                                        p{
-                                            key: "{s}", // TODO keys
-                                            "{s}"
+                                        li{
+                                            p{"{s}"}
                                         }
                                     ))
                                 }
                             }
-                        ))
+                        )})
                     }
                 }
             }
