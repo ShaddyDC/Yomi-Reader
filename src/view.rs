@@ -1,6 +1,7 @@
 extern crate web_sys;
 
 use dioxus::prelude::*;
+use wasm_bindgen::{prelude::Closure, JsCast};
 
 use crate::read_state::ReaderState;
 
@@ -27,6 +28,25 @@ fn clicked(onselect: &EventHandler<String>) {
     onselect.call(s);
 }
 
+async fn apply_current_scroll(read_state: UseRef<Option<ReaderState>>) {
+    let window = web_sys::window().expect("should have window");
+
+    // If we apply the scroll position immediately, it will be reset to 0
+    // Instead, we push it to the end of the current event queue
+
+    let callback = Closure::<dyn Fn()>::new(move || {
+        if let Some(read_state) = read_state.read().as_ref() {
+            read_state.apply_scroll();
+        }
+    });
+
+    window
+        .set_timeout_with_callback(callback.as_ref().unchecked_ref())
+        .unwrap();
+
+    callback.forget();
+}
+
 pub(crate) fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
     let text = cx
         .props
@@ -36,10 +56,20 @@ pub(crate) fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
         .and_then(|state| state.get_text());
 
     let onselect = &cx.props.onselect;
+    let read_state = cx.props.read_state;
+
+    // Set scroll after everything is rendered
+    use_future(&cx, (), |()| {
+        let read_state = read_state.clone();
+
+        async move {
+            apply_current_scroll(read_state).await;
+        }
+    });
 
     if let Some(text) = text {
         cx.render(rsx! {
-            div {
+            main {
                 // TODO: Properly sandbox / iframe
                 dangerous_inner_html: "{text}",
                 onclick: |_| clicked(onselect)

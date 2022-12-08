@@ -1,5 +1,5 @@
 [package]
-name = "vocreader"
+name = "vocreader" # TODO rename
 version = "0.1.0"
 edition = "2021"
 
@@ -35,8 +35,14 @@ features = [
     "Document",
     "Blob",
     "Element",
+    "HtmlElement",
     "HtmlInputElement",
     "FileList",
     "File",
     "Storage",
 ]
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true

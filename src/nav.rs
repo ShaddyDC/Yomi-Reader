@@ -16,18 +16,30 @@ pub(crate) fn nav_component<'a>(cx: Scope<'a, NavProps<'a>>) -> Element<'a> {
     };
 
     cx.render(rsx! {
-        div { "Page {current_page}/{page_count}" }
-        button {
-            onclick: move |_| {
-               std::mem::drop(read_state.write().as_mut().unwrap().prev_page());
-           },
-            "Previous"
-         }
-         button {
-             onclick: move |_| {
-                std::mem::drop(read_state.write().as_mut().unwrap().next_page());
-            },
-             "Next"
-          }
+        nav{
+            class: "flex",
+
+            button {
+                class: "flex-1 bg-gray-100 rounded-full",
+
+                onclick: move |_| {
+                   read_state.write().as_mut().unwrap().prev_page();
+                },
+                "Previous"
+            }
+            div {
+                class: "flex-1 text-center",
+
+                "Page {current_page}/{page_count}"
+            }
+            button {
+                class: "flex-1 bg-gray-100 rounded-full",
+
+                onclick: move |_| {
+                    read_state.write().as_mut().unwrap().next_page();
+                },
+                "Next"
+            }
+        }
     })
 }

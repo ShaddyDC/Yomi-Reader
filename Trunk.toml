@@ -1,0 +1,8 @@
+[[hooks]]
+stage = "pre_build"
+# https://blog.urth.org/2022/02/14/frontend-rust-without-node/
+command = "sh"
+command_arguments = [
+    "-c",
+    "./tailwindcss-linux-x64 -i css/tailwind.css -o css/tailwind_compiled.css",
+]
