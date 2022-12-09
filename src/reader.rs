@@ -94,6 +94,16 @@ pub(crate) fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a
 
         })
     } else {
-        cx.render(rsx! {p{"No document"}})
+        cx.render(rsx! {
+            div{
+                class: "container mx-auto h-full grid place-items-center",
+
+                p{
+                    class: "text-center",
+
+                    "No document"
+                }
+            }
+        })
     }
 }

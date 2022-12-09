@@ -576,6 +576,10 @@ video {
   display: flex;
 }
 
+.grid {
+  display: grid;
+}
+
 .hidden {
   display: none;
 }
@@ -590,6 +594,10 @@ video {
 
 .h-2\/5 {
   height: 40%;
+}
+
+.h-full {
+  height: 100%;
 }
 
 .max-h-full {
@@ -622,6 +630,10 @@ video {
 
 .flex-col {
   flex-direction: column;
+}
+
+.place-items-center {
+  place-items: center;
 }
 
 .overflow-y-hidden {
