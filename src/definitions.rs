@@ -1,8 +1,18 @@
 use dioxus::prelude::*;
-use yomi_dict::{
-    deinflect::Reasons,
-    translator::{get_terms, DictEntries},
-};
+use yomi_dict::{deinflect::Reasons, translator::DictEntries};
+
+// This shouldn't be an issue since we only mutate the db on creation with load_db
+// https://github.com/rust-lang/rust-clippy/issues/6671
+#[allow(clippy::await_holding_refcell_ref)]
+async fn get_terms(
+    text: &str,
+    reasons: &Reasons,
+    db: &UseRef<Option<yomi_dict::db::DB>>,
+) -> Result<Vec<DictEntries>, yomi_dict::YomiDictError> {
+    let db_ref = db.read();
+    let db = db_ref.as_ref().unwrap();
+    yomi_dict::translator::get_terms(text, reasons, db).await
+}
 
 // TODO broken ン
 pub(crate) async fn set_defs(
@@ -16,15 +26,13 @@ pub(crate) async fn set_defs(
         return;
     }
 
-    let entries = match get_terms(data, reasons, db.read().as_ref().unwrap()).await {
+    let entries = match get_terms(data, reasons, db).await {
         Ok(entries) => entries,
         Err(e) => {
             log::error!("Cannot get definitions due to error {}", e);
             return;
         }
     };
-
-    log::info!("Defs: {entries:#?}");
 
     defs.set(entries)
 }

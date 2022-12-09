@@ -23,7 +23,7 @@ pub(crate) fn nav_component<'a>(cx: Scope<'a, NavProps<'a>>) -> Element<'a> {
                 class: "flex-1 bg-gray-100 rounded-full",
 
                 onclick: move |_| {
-                   read_state.write().as_mut().unwrap().prev_page();
+                    read_state.with_mut(|state| state.as_mut().unwrap().prev_page());
                 },
                 "Previous"
             }
@@ -36,7 +36,7 @@ pub(crate) fn nav_component<'a>(cx: Scope<'a, NavProps<'a>>) -> Element<'a> {
                 class: "flex-1 bg-gray-100 rounded-full",
 
                 onclick: move |_| {
-                    read_state.write().as_mut().unwrap().next_page();
+                    read_state.with_mut(|state| state.as_mut().unwrap().next_page());
                 },
                 "Next"
             }

@@ -84,11 +84,6 @@ impl ReaderState {
         // TODO error handling
         if let Some(element) = document.get_element_by_id("reader-scroll") {
             element.set_scroll_top(self.scroll_top);
-            let x = self.scroll_top;
-            log::info!("Set scroll {x}");
-
-            let x = &element.inner_html()[..1000];
-            log::info!("E {x:?}");
         } else {
             log::warn!("Couldn't get element to set scroll position");
         }

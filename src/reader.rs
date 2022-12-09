@@ -27,10 +27,9 @@ async fn save_scroll_position(read_state: UseRef<Option<ReaderState>>) {
 
     let scroll_callback = Closure::<dyn Fn()>::new(move || {
         let offset = element_moved.scroll_top();
-        read_state
-            .write()
-            .as_mut()
-            .map(|state| state.set_scroll(offset));
+        if let Some(state) = read_state.write().as_mut() {
+            state.set_scroll(offset)
+        }
     });
 
     element
@@ -40,7 +39,7 @@ async fn save_scroll_position(read_state: UseRef<Option<ReaderState>>) {
     scroll_callback.forget();
 }
 
-pub(crate) fn reader_component<'a, 'b>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a> {
+pub(crate) fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a> {
     let read_state = cx.props.read_state;
     let db = cx.props.db;
     let reasons = cx.props.reasons;

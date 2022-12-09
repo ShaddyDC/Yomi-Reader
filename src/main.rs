@@ -12,6 +12,7 @@ use std::io::Cursor;
 use dioxus::prelude::*;
 use epub::doc::EpubDoc;
 use read_state::ReaderState;
+use yomi_dict::{Dict, YomiDictError};
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
@@ -20,16 +21,27 @@ fn main() {
 
 async fn load_db(db: &UseRef<Option<yomi_dict::db::DB>>) {
     if db.read().is_none() {
-        db.write()
-            .replace(yomi_dict::db::DB::new("data").await.unwrap());
+        // TODO get rid of all unwraps
+        let new_db = yomi_dict::db::DB::new("data").await.unwrap();
+        db.with_mut(|db| db.replace(new_db));
         log::info!("Database loaded");
     }
 }
 
-async fn load_dict(dbc: &UseRef<Option<yomi_dict::db::DB>>, data: Vec<u8>) {
+// This shouldn't be an issue since we only mutate the db on creation with load_db
+// https://github.com/rust-lang/rust-clippy/issues/6671
+#[allow(clippy::await_holding_refcell_ref)]
+async fn add_dict_to_db(
+    db: &UseRef<Option<yomi_dict::db::DB>>,
+    dict: Dict,
+) -> Result<(), YomiDictError> {
+    db.read().as_ref().unwrap().add_dict(dict).await
+}
+
+async fn load_dict(db: &UseRef<Option<yomi_dict::db::DB>>, data: Vec<u8>) {
     log::info!("Loading dictionary");
 
-    if dbc.read().is_none() {
+    if db.read().is_none() {
         log::error!("Cannot load dictionary as no database is loaded.");
         return;
     }
@@ -42,12 +54,11 @@ async fn load_dict(dbc: &UseRef<Option<yomi_dict::db::DB>>, data: Vec<u8>) {
     if let Ok(valid_dict) = res {
         log::info!("Dictionary read. Attempting to save to storage");
 
-        let res = dbc.write().as_mut().unwrap().add_dict(valid_dict).await;
-
-        if let Err(err) = res {
+        if let Err(err) = add_dict_to_db(db, valid_dict).await {
             log::error!("Failed to save dictionary dictionary with error {:?}", err);
             return;
         }
+
         log::info!("Loaded dictionary");
     }
 }
@@ -109,7 +120,7 @@ fn load_stored_reader_state() -> Option<ReaderState> {
 }
 
 fn app(cx: Scope) -> Element {
-    let reasons = use_state(&cx, || yomi_dict::deinflect::inflection_reasons());
+    let reasons = use_state(&cx, yomi_dict::deinflect::inflection_reasons);
 
     let db = use_ref(&cx, || None);
 

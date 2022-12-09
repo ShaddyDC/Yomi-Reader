@@ -51,9 +51,7 @@ pub(crate) fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
     let text = cx
         .props
         .read_state
-        .write()
-        .as_mut()
-        .and_then(|state| state.get_text());
+        .with_mut(|state| state.as_mut().and_then(|state| state.get_text()));
 
     let onselect = &cx.props.onselect;
     let read_state = cx.props.read_state;
