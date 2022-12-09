@@ -83,7 +83,7 @@ pub(crate) fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a
             }
 
             div{
-                class: "px-4 h-2/5 overflow-y-scroll bg-gray-50 rounded-md",
+                class: "px-4 h-2/5 overflow-y-scroll bg-gray-50 rounded-md border-2",
 
                 div{
                     class: "container mx-auto",

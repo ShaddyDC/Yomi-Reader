@@ -41,7 +41,7 @@ pub(crate) async fn set_defs(
 pub(crate) fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<DictEntries>) -> Element {
     cx.render(rsx!(
     aside{
-        class: "container mx-auto",
+        class: "container mx-auto mt-2",
 
         ul{
             class: "list-none",

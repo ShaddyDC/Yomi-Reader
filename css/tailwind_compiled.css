@@ -568,6 +568,10 @@ video {
   margin-right: auto;
 }
 
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
 .block {
   display: block;
 }
@@ -654,6 +658,10 @@ video {
 
 .rounded-md {
   border-radius: 0.375rem;
+}
+
+.border-2 {
+  border-width: 2px;
 }
 
 .bg-gray-100 {
