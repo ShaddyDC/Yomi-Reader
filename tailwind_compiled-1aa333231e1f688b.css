@@ -568,12 +568,20 @@ video {
   margin-right: auto;
 }
 
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
 .block {
   display: block;
 }
 
 .flex {
   display: flex;
+}
+
+.grid {
+  display: grid;
 }
 
 .h-screen {
@@ -586,6 +594,10 @@ video {
 
 .h-2\/5 {
   height: 40%;
+}
+
+.h-full {
+  height: 100%;
 }
 
 .max-h-full {
@@ -620,6 +632,10 @@ video {
   flex-direction: column;
 }
 
+.place-items-center {
+  place-items: center;
+}
+
 .overflow-y-hidden {
   overflow-y: hidden;
 }
@@ -638,6 +654,10 @@ video {
 
 .rounded-md {
   border-radius: 0.375rem;
+}
+
+.border-2 {
+  border-width: 2px;
 }
 
 .bg-gray-100 {
