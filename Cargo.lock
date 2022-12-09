@@ -901,27 +901,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
-name = "vocreader"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "base64",
- "dioxus",
- "epub",
- "idb",
- "js-sys",
- "log",
- "serde",
- "serde-wasm-bindgen",
- "thiserror",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm-logger",
- "web-sys",
- "yomi-dict",
-]
-
-[[package]]
 name = "wana_kana"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1099,6 +1078,27 @@ dependencies = [
  "wana_kana",
  "wasm-bindgen",
  "zip",
+]
+
+[[package]]
+name = "yomi-reader"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base64",
+ "dioxus",
+ "epub",
+ "idb",
+ "js-sys",
+ "log",
+ "serde",
+ "serde-wasm-bindgen",
+ "thiserror",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-logger",
+ "web-sys",
+ "yomi-dict",
 ]
 
 [[package]]
