@@ -6,3 +6,8 @@ command_arguments = [
     "-c",
     "./tailwindcss-linux-x64 -i css/tailwind.css -o css/tailwind_compiled.css",
 ]
+
+[[hooks]]
+stage = "build"
+command = "sh"
+command_arguments = ["-c", "cat CNAME > $TRUNK_STAGING_DIR/CNAME"]
