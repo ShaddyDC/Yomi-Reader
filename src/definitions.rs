@@ -14,8 +14,7 @@ async fn get_terms(
     yomi_dict::translator::get_terms(text, reasons, db).await
 }
 
-// TODO broken ン
-pub(crate) async fn set_defs(
+pub(crate) async fn update_defs_and_selection(
     defs: &UseState<Vec<DictEntries>>,
     db: &UseRef<Option<yomi_dict::db::DB>>,
     reasons: &Reasons,
@@ -33,6 +32,19 @@ pub(crate) async fn set_defs(
             return;
         }
     };
+
+    let window = web_sys::window().expect("should have window");
+    let selection = window.get_selection().expect("Should have selection");
+    if let Some(selection) = selection {
+        // TODO ensure we're only modifying our own selection
+        selection.collapse_to_start().unwrap();
+        for _ in 0..entries
+            .first()
+            .map_or(0, |entry| entry.entries[0].source_len)
+        {
+            selection.modify("extend", "forward", "character").unwrap();
+        }
+    }
 
     defs.set(entries)
 }
@@ -64,15 +76,19 @@ pub(crate) fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<DictEntr
                             d.entries.iter().flat_map(|e| {
                                 // let key = ((e.term.dict_id as u64) << 32) | e.term.sequence as u64;
 
-                                e.term.glossary.iter().map(|s| rsx!(
-                                    li{
-                                        span{
-                                            class: "whitespace-pre-wrap",
+                                e.term.glossary.iter().map(|s| {
+                                    rsx!(
+                                        li{
+                                            key: "{s}", // TODO inefficient
 
-                                            "{s}"
+                                            span{
+                                                class: "whitespace-pre-wrap",
+
+                                                "{s}"
+                                            }
                                         }
-                                    }
-                                ))
+                                    )
+                                })
                             })
                         }
                     }

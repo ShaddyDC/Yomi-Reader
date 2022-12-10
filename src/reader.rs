@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use yomi_dict::deinflect::Reasons;
 
-use crate::{definitions::set_defs, read_state::ReaderState};
+use crate::{definitions::update_defs_and_selection, read_state::ReaderState};
 
 #[derive(Props)]
 pub(crate) struct ReaderProps<'a> {
@@ -74,7 +74,7 @@ pub(crate) fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a
                             let defs = definitions.clone();
                             let db = db.clone();
                             wasm_bindgen_futures::spawn_local(async move{
-                                set_defs(&defs, &db, reasons.get(), &evt).await;
+                                update_defs_and_selection(&defs, &db, reasons.get(), &evt).await;
                             });
                         }
                     }

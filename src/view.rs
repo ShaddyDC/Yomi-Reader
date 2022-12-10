@@ -12,20 +12,28 @@ pub(crate) struct ViewProps<'a> {
 }
 
 fn clicked(onselect: &EventHandler<String>) {
-    // TODO Breaks on double click
-    let sel = web_sys::window().unwrap().get_selection().unwrap().unwrap();
-    let n = sel.anchor_node().unwrap();
-    let s: String = n
-        .text_content()
-        .unwrap()
-        .chars()
-        .skip(sel.anchor_offset().try_into().unwrap())
-        .take(16)
-        .collect();
+    const SELECTION_LENGTH: usize = 16;
 
-    log::info!("Clicked: {}", s);
+    let window = web_sys::window().expect("should have window");
 
-    onselect.call(s);
+    let selection = window.get_selection().expect("Should have selection");
+
+    // Selection in eg iframe or otherwise inaccessible
+    let Some(selection) = selection else { return };
+
+    // We want to allow user range selection
+    if selection.type_() != "Caret" {
+        return;
+    }
+
+    selection.modify("extend", "forward", "sentence").unwrap();
+
+    if let Some(sentence_end) = selection.to_string().as_string() {
+        let s = sentence_end.chars().take(SELECTION_LENGTH).collect();
+        log::info!("Clicked: {}", s);
+
+        onselect.call(s);
+    }
 }
 
 async fn apply_current_scroll(read_state: UseRef<Option<ReaderState>>) {
