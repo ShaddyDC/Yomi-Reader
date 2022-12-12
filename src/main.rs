@@ -1,4 +1,5 @@
 mod definitions;
+mod info_state;
 mod nav;
 mod read_state;
 mod reader;
@@ -11,6 +12,7 @@ use std::io::Cursor;
 
 use dioxus::prelude::*;
 use epub::doc::EpubDoc;
+use info_state::InfoState;
 use read_state::ReaderState;
 use yomi_dict::{Dict, YomiDictError};
 
@@ -19,11 +21,16 @@ fn main() {
     dioxus::web::launch(app);
 }
 
-async fn load_db(db: &UseRef<Option<yomi_dict::db::DB>>) {
+async fn load_db(db: &UseRef<Option<yomi_dict::db::DB>>, info_state: &UseRef<InfoState>) {
     if db.read().is_none() {
         // TODO get rid of all unwraps
         let new_db = yomi_dict::db::DB::new("data").await.unwrap();
         db.with_mut(|db| db.replace(new_db));
+        info_state.with_mut(|s| {
+            if *s == InfoState::LoadDB {
+                *s = InfoState::Idle
+            }
+        });
         log::info!("Database loaded");
     }
 }
@@ -38,9 +45,15 @@ async fn add_dict_to_db(
     db.read().as_ref().unwrap().add_dict(dict).await
 }
 
-async fn load_dict(db: &UseRef<Option<yomi_dict::db::DB>>, data: Vec<u8>) {
+async fn load_dict(
+    db: &UseRef<Option<yomi_dict::db::DB>>,
+    info_state: &UseRef<InfoState>,
+    data: Vec<u8>,
+) {
     log::info!("Loading dictionary");
 
+    // TODO Only allow when idle
+    info_state.with_mut(|s| *s = InfoState::LoadDict);
     if db.read().is_none() {
         log::error!("Cannot load dictionary as no database is loaded.");
         return;
@@ -59,6 +72,7 @@ async fn load_dict(db: &UseRef<Option<yomi_dict::db::DB>>, data: Vec<u8>) {
             return;
         }
 
+        info_state.with_mut(|s| *s = InfoState::Idle);
         log::info!("Loaded dictionary");
     }
 }
@@ -123,12 +137,14 @@ fn app(cx: Scope) -> Element {
     let reasons = use_state(&cx, yomi_dict::deinflect::inflection_reasons);
 
     let db = use_ref(&cx, || None);
+    let info_state = use_ref(&cx, || InfoState::LoadDB);
 
     // Cannot use async init for use_ref directly, so load database at next opportunity
     use_future(&cx, (), |()| {
         let db_tomove = db.clone();
+        let info_state_tomove = info_state.clone();
         async move {
-            load_db(&db_tomove).await;
+            load_db(&db_tomove, &info_state_tomove).await;
         }
     });
 
@@ -136,6 +152,7 @@ fn app(cx: Scope) -> Element {
 
     let db_tomove = db.clone();
     let read_state_tomove = read_state.clone();
+    let info_state_tomove = info_state.clone();
 
     cx.render(rsx! {
         div{
@@ -155,7 +172,8 @@ fn app(cx: Scope) -> Element {
                             label: "Upload Dict",
                             upload_callback: move |data|{
                                 let db_tomove = db_tomove.clone();
-                                wasm_bindgen_futures::spawn_local(async move{load_dict(&db_tomove, data).await;});
+                                let info_state_tomove = info_state_tomove.clone();
+                                wasm_bindgen_futures::spawn_local(async move{load_dict(&db_tomove, &info_state_tomove, data).await;});
                             }
                         }
                     },
@@ -178,7 +196,7 @@ fn app(cx: Scope) -> Element {
 
                 onscroll: |_| log::info!("scroll"),
 
-                crate::reader::reader_component{ read_state: read_state, db: db, reasons: reasons }
+                crate::reader::reader_component{ read_state: read_state, db: db, reasons: reasons, info_state: info_state }
             }
         }
     })

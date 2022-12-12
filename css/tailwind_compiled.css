@@ -592,16 +592,16 @@ video {
   height: 100vh;
 }
 
+.h-full {
+  height: 100%;
+}
+
 .h-3\/5 {
   height: 60%;
 }
 
 .h-2\/5 {
   height: 40%;
-}
-
-.h-full {
-  height: 100%;
 }
 
 .max-h-full {
