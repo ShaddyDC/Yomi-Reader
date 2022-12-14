@@ -1352,27 +1352,27 @@ imports.wbg.__wbg_scrollTop_e9a97925f8b862b4 = function(arg0) {
     const ret = getObject(arg0).scrollTop;
     return ret;
 };
-imports.wbg.__wbindgen_closure_wrapper436 = function(arg0, arg1, arg2) {
+imports.wbg.__wbindgen_closure_wrapper437 = function(arg0, arg1, arg2) {
     const ret = makeClosure(arg0, arg1, 135, __wbg_adapter_40);
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper1048 = function(arg0, arg1, arg2) {
+imports.wbg.__wbindgen_closure_wrapper1049 = function(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 77, __wbg_adapter_43);
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper1051 = function(arg0, arg1, arg2) {
+imports.wbg.__wbindgen_closure_wrapper1052 = function(arg0, arg1, arg2) {
     const ret = makeClosure(arg0, arg1, 77, __wbg_adapter_46);
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper1059 = function(arg0, arg1, arg2) {
+imports.wbg.__wbindgen_closure_wrapper1060 = function(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 87, __wbg_adapter_49);
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper1879 = function(arg0, arg1, arg2) {
+imports.wbg.__wbindgen_closure_wrapper1880 = function(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 103, __wbg_adapter_52);
     return addHeapObject(ret);
 };
-imports.wbg.__wbindgen_closure_wrapper2140 = function(arg0, arg1, arg2) {
+imports.wbg.__wbindgen_closure_wrapper2141 = function(arg0, arg1, arg2) {
     const ret = makeMutClosure(arg0, arg1, 87, __wbg_adapter_55);
     return addHeapObject(ret);
 };
@@ -1411,7 +1411,7 @@ function initSync(module) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('yomi-reader-c9730e4a47c360a6_bg.wasm', import.meta.url);
+        input = new URL('yomi-reader-d435821c4f9d30ef_bg.wasm', import.meta.url);
     }
     const imports = getImports();
 
