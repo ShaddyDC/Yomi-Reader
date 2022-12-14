@@ -26,7 +26,13 @@ fn clicked(onselect: &EventHandler<String>) {
         return;
     }
 
-    selection.modify("extend", "forward", "sentence").unwrap();
+    if selection.modify("extend", "forward", "sentence").is_err() {
+        for _ in 0..SELECTION_LENGTH {
+            if selection.modify("extend", "forward", "character").is_err() {
+                break;
+            }
+        }
+    }
 
     if let Some(sentence_end) = selection.to_string().as_string() {
         let s = sentence_end.chars().take(SELECTION_LENGTH).collect();
