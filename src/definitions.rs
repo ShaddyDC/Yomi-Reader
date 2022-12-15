@@ -51,11 +51,10 @@ pub(crate) async fn update_defs_and_selection(
 
 #[inline_props]
 pub(crate) fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<DictEntries>) -> Element {
-    cx.render(rsx!(
-    aside{
-        class: "container mx-auto mt-2",
-
-        ul{
+    let content = if definitions.is_empty() {
+        rsx!(p{"Click the first letter of an expression to look it up!"})
+    } else {
+        rsx!(ul{
             class: "list-none",
 
             definitions.iter().map(|d| rsx!(
@@ -94,7 +93,12 @@ pub(crate) fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<DictEntr
                     }
                 }
             ))
-        }
-    }
-    ))
+        })
+    };
+
+    cx.render(rsx!(aside {
+        class: "container mx-auto mt-2",
+
+        content
+    }))
 }
