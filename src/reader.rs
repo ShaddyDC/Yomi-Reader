@@ -5,7 +5,9 @@ use wasm_bindgen::{prelude::Closure, JsCast};
 use yomi_dict::deinflect::Reasons;
 
 use crate::{
-    definitions::update_defs_and_selection, info_state::InfoState, read_state::ReaderState,
+    definitions::update_defs_and_selection,
+    info_state::{InfoState, LoadDictState},
+    read_state::ReaderState,
 };
 
 #[derive(Props)]
@@ -99,7 +101,16 @@ pub(crate) fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a
             rsx! {crate::definitions::definitions_component{ definitions: definitions.get() }}
         }
         InfoState::LoadDB => rsx! {p{"Loading DB. Please wait"}},
-        InfoState::LoadDict => rsx! {p{"Loading Dictionary. Please wait"}},
+        InfoState::LoadDict(LoadDictState::ParsingDict) => {
+            rsx! {p{"Parsing dictionary. Please wait"}}
+        }
+        InfoState::LoadDict(LoadDictState::AddingDictIndex) => {
+            rsx! {p{"Adding dictionary to database. Please wait"}}
+        }
+        InfoState::LoadDict(LoadDictState::AddingDictContent(current, total)) => {
+            let (current, total) = (current.to_owned(), total.to_owned());
+            rsx! {p{"Loading Dictionary: {current}/{total} Please wait"}}
+        }
     });
 
     cx.render(rsx! {

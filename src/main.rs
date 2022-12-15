@@ -14,7 +14,6 @@ use dioxus::prelude::*;
 use epub::doc::EpubDoc;
 use info_state::InfoState;
 use read_state::ReaderState;
-use yomi_dict::{Dict, YomiDictError};
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
@@ -38,13 +37,6 @@ async fn load_db(db: &UseRef<Option<yomi_dict::db::DB>>, info_state: &UseRef<Inf
 // This shouldn't be an issue since we only mutate the db on creation with load_db
 // https://github.com/rust-lang/rust-clippy/issues/6671
 #[allow(clippy::await_holding_refcell_ref)]
-async fn add_dict_to_db(
-    db: &UseRef<Option<yomi_dict::db::DB>>,
-    dict: Dict,
-) -> Result<(), YomiDictError> {
-    db.read().as_ref().unwrap().add_dict(dict).await
-}
-
 async fn load_dict(
     db: &UseRef<Option<yomi_dict::db::DB>>,
     info_state: &UseRef<InfoState>,
@@ -53,7 +45,8 @@ async fn load_dict(
     log::info!("Loading dictionary");
 
     // TODO Only allow when idle
-    info_state.with_mut(|s| *s = InfoState::LoadDict);
+    // TODO Reset InfoState on failure
+    info_state.with_mut(|s| *s = InfoState::LoadDict(info_state::LoadDictState::ParsingDict));
     if db.read().is_none() {
         log::error!("Cannot load dictionary as no database is loaded.");
         return;
@@ -66,10 +59,37 @@ async fn load_dict(
     }
     if let Ok(valid_dict) = res {
         log::info!("Dictionary read. Attempting to save to storage");
+        info_state
+            .with_mut(|s| *s = InfoState::LoadDict(info_state::LoadDictState::AddingDictIndex));
 
-        if let Err(err) = add_dict_to_db(db, valid_dict).await {
-            log::error!("Failed to save dictionary dictionary with error {:?}", err);
-            return;
+        let db = db.read();
+        let db = db.as_ref().unwrap();
+
+        let steps = match db.add_dict_stepwise(valid_dict).await {
+            Err(err) => {
+                log::error!("Failed to save dictionary dictionary with error {:?}", err);
+                return;
+            }
+            Ok(steps) => steps,
+        };
+
+        let mut progress = 0;
+        for step in steps.steps {
+            info_state.with_mut(|s| {
+                *s = InfoState::LoadDict(info_state::LoadDictState::AddingDictContent(
+                    progress,
+                    steps.total_count,
+                ))
+            });
+            log::info!("DB progress {progress}/{}", steps.total_count);
+
+            progress += match step.await {
+                Ok(p) => p,
+                Err(err) => {
+                    log::error!("Failed to save dictionary dictionary with error {:?}", err);
+                    return;
+                }
+            };
         }
 
         info_state.with_mut(|s| *s = InfoState::Idle);
