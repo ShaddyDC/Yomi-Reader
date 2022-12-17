@@ -30,7 +30,7 @@ pub(crate) fn nav_component<'a>(cx: Scope<'a, NavProps<'a>>) -> Element<'a> {
             div {
                 class: "flex-1 text-center",
 
-                "Page {current_page}/{page_count}"
+                "Chapter {current_page}/{page_count}"
             }
             button {
                 class: "flex-1 bg-gray-100 rounded-full",

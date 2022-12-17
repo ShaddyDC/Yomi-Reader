@@ -21,6 +21,7 @@ pub(crate) async fn update_defs_and_selection(
     data: &str,
 ) {
     if db.read().is_none() {
+        // TODO reset selection
         log::error!("Cannot update definitions since DB is not loaded yet!");
         return;
     }
