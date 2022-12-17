@@ -18,18 +18,18 @@ pub fn upload_component<'a, F: FnMut(Vec<u8>) + Clone + 'static>(
 
     cx.render(rsx! {
         label {
-            class: "block",
+            class: "content-center grid place-items-center",
 
             r#for: "{id}",
 
             span{
-                class: "sr-only",
+                class: "m-2 bg-gray-100 hover:bg-gray-200 py-2 px-4 rounded cursor-pointer",
 
                 "{label}"
             }
 
             input{
-                class: "block w-full text-sm text-gray-500 file:mr4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold",
+                class: "hidden",
 
                 r#type: "file",
                 id: "{id}",
