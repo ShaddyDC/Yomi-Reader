@@ -174,7 +174,23 @@ fn app(cx: Scope) -> Element {
     let read_state_tomove = read_state.clone();
     let info_state_tomove = info_state.clone();
 
+    let tile = read_state
+        .with(|s| {
+            s.as_ref().map(|s| {
+                format!(
+                    "Yomi-Reader – {} – Chapter {}/{}",
+                    s.get_title(),
+                    s.get_page(),
+                    s.get_page_count()
+                )
+            })
+        })
+        .unwrap_or_else(|| "Yomi-Reader".to_string());
+
     cx.render(rsx! {
+        title{
+            "{tile}"
+        }
         div{
             class: "flex flex-col h-screen pb-4",
 

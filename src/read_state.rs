@@ -38,6 +38,12 @@ impl ReaderState {
         }
     }
 
+    pub(crate) fn get_title(&self) -> String {
+        self.doc
+            .mdata("title")
+            .unwrap_or_else(|| "<Document has no title>".to_string())
+    }
+
     pub(crate) fn get_text(&mut self) -> Option<String> {
         self.doc.get_current_str().ok() // TODO Look up errors
     }
