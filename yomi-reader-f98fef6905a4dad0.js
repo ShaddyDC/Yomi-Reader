@@ -1248,6 +1248,10 @@ imports.wbg.__wbg_openCursor_2262d905dc81d11b = function() { return handleError(
 imports.wbg.__wbg_collapseToStart_f00384640e0ba55f = function() { return handleError(function (arg0) {
     getObject(arg0).collapseToStart();
 }, arguments) };
+imports.wbg.__wbg_toString_7be108a12ef03bc2 = function(arg0) {
+    const ret = getObject(arg0).toString();
+    return addHeapObject(ret);
+};
 imports.wbg.__wbg_setTimeout_10a0deb079872157 = function() { return handleError(function (arg0, arg1) {
     const ret = getObject(arg0).setTimeout(getObject(arg1));
     return ret;
@@ -1312,10 +1316,6 @@ imports.wbg.__wbg_type_310e2d39ab5c593b = function(arg0, arg1) {
     const len0 = WASM_VECTOR_LEN;
     getInt32Memory0()[arg0 / 4 + 1] = len0;
     getInt32Memory0()[arg0 / 4 + 0] = ptr0;
-};
-imports.wbg.__wbg_toString_7be108a12ef03bc2 = function(arg0) {
-    const ret = getObject(arg0).toString();
-    return addHeapObject(ret);
 };
 imports.wbg.__wbg_only_6bea849c7355394e = function() { return handleError(function (arg0) {
     const ret = IDBKeyRange.only(getObject(arg0));
@@ -1419,7 +1419,7 @@ function initSync(module) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('yomi-reader-cbe454e6e7abceaa_bg.wasm', import.meta.url);
+        input = new URL('yomi-reader-f98fef6905a4dad0_bg.wasm', import.meta.url);
     }
     const imports = getImports();
 
