@@ -39,9 +39,18 @@ pub(crate) async fn update_defs_and_selection(
     if let Some(selection) = selection {
         // TODO ensure we're only modifying our own selection
         selection.collapse_to_start().unwrap();
-        for _ in 0..entries
+
+        let len = entries
             .first()
-            .map_or(0, |entry| entry.entries[0].source_len)
+            .map_or(0, |entry| entry.entries[0].source_len);
+
+        // Can't just execute `len` times because line-breaks etc. count extra.
+        // Note that this is inefficient and a lot of work like `chars()` is repeated.
+        // It's simple though and seems fast enough.
+        while selection
+            .to_string()
+            .as_string()
+            .map_or(false, |s| s.chars().count() != len)
         {
             selection.modify("extend", "forward", "character").unwrap();
         }
