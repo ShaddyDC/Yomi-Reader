@@ -71,12 +71,22 @@ pub(crate) fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<DictEntr
                 li{
                     key: "{d.expression}/{d.reading}",
                     h2{
-                        class: "text-lg font-medium",
+                        class: "text-xl font-medium inline-block",
 
                         ruby {
                             p { "{d.expression}" }
                             rt{ "{d.reading}" }
                         }
+                    }
+                    span{
+                        d.entries[0].reasons.iter().map(|r|
+                            rsx!(
+                                p{
+                                    class: "inline-block text-sm rounded-full m-1 p-1 px-2 bg-gray-300",
+                                    "{r}"
+                                }
+                            )
+                        )
                     }
                     div{
                         ol{
