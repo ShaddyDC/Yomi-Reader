@@ -160,13 +160,13 @@ fn load_stored_reader_state() -> Option<ReaderState> {
 }
 
 fn app(cx: Scope) -> Element {
-    let reasons = use_state(&cx, yomi_dict::inflection_reasons);
+    let reasons = use_state(cx, yomi_dict::inflection_reasons);
 
-    let db = use_ref(&cx, || None);
-    let info_state = use_ref(&cx, || InfoState::LoadDB);
+    let db = use_ref(cx, || None);
+    let info_state = use_ref(cx, || InfoState::LoadDB);
 
     // Cannot use async init for use_ref directly, so load database at next opportunity
-    use_future(&cx, (), |()| {
+    use_future(cx, (), |()| {
         let db_tomove = db.clone();
         let info_state_tomove = info_state.clone();
         async move {
@@ -174,7 +174,7 @@ fn app(cx: Scope) -> Element {
         }
     });
 
-    let read_state = use_ref(&cx, load_stored_reader_state);
+    let read_state = use_ref(cx, load_stored_reader_state);
 
     let db_tomove = db.clone();
     let read_state_tomove = read_state.clone();

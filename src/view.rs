@@ -72,7 +72,7 @@ pub fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
     let read_state = cx.props.read_state;
 
     // Set scroll after everything is rendered
-    use_future(&cx, (), |()| {
+    use_future(cx, (), |()| {
         let read_state = read_state.clone();
 
         async move {

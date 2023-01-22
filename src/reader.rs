@@ -49,12 +49,12 @@ pub fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a> {
     let db = cx.props.db;
     let reasons = cx.props.reasons;
 
-    let definitions = use_state(&cx, Vec::new);
+    let definitions = use_state(cx, Vec::new);
 
     let has_document = read_state.read().is_some();
 
     // Set scroll after everything is rendered
-    use_future(&cx, (), |()| {
+    use_future(cx, (), |()| {
         let read_state = read_state.clone();
 
         async move {
