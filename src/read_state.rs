@@ -8,6 +8,7 @@ pub(crate) struct ReaderState {
     doc: EpubDoc<Cursor<Vec<u8>>>,
     page: usize,
     scroll_top: i32,
+    text: Option<String>,
 }
 
 // TODO error checking
@@ -30,11 +31,17 @@ fn save_scroll(page: i32) {
 }
 
 impl ReaderState {
-    pub(crate) fn new(doc: EpubDoc<Cursor<Vec<u8>>>, page: usize, scroll_top: i32) -> ReaderState {
+    pub(crate) fn new(
+        mut doc: EpubDoc<Cursor<Vec<u8>>>,
+        page: usize,
+        scroll_top: i32,
+    ) -> ReaderState {
+        let text = doc.get_current_str().ok(); // TODO Look up errors
         ReaderState {
             doc,
             page,
             scroll_top,
+            text,
         }
     }
 
@@ -44,8 +51,8 @@ impl ReaderState {
             .unwrap_or_else(|| "<Document has no title>".to_string())
     }
 
-    pub(crate) fn get_text(&mut self) -> Option<String> {
-        self.doc.get_current_str().ok() // TODO Look up errors
+    pub(crate) fn get_text(&self) -> Option<String> {
+        self.text.clone()
     }
 
     pub(crate) fn get_page(&self) -> usize {
@@ -59,6 +66,7 @@ impl ReaderState {
     pub(crate) fn next_page(&mut self) {
         if let Ok(()) = self.doc.go_next() {
             self.page = self.doc.get_current_page();
+            self.text = self.doc.get_current_str().ok();
             save_page(self.page);
             self.set_scroll(0);
             self.apply_scroll();
@@ -68,6 +76,7 @@ impl ReaderState {
     pub(crate) fn prev_page(&mut self) {
         if let Ok(()) = self.doc.go_prev() {
             self.page = self.doc.get_current_page();
+            self.text = self.doc.get_current_str().ok();
             save_page(self.page);
             self.set_scroll(0);
             self.apply_scroll();
