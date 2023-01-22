@@ -6,7 +6,7 @@ use wasm_bindgen::{prelude::Closure, JsCast};
 use crate::read_state::ReaderState;
 
 #[derive(Props)]
-pub(crate) struct ViewProps<'a> {
+pub struct ViewProps<'a> {
     read_state: &'a UseRef<Option<ReaderState>>,
     onselect: EventHandler<'a, String>,
 }
@@ -42,7 +42,7 @@ fn clicked(onselect: &EventHandler<String>) {
     }
 }
 
-async fn apply_current_scroll(read_state: UseRef<Option<ReaderState>>) {
+fn apply_current_scroll(read_state: UseRef<Option<ReaderState>>) {
     let window = web_sys::window().expect("should have window");
 
     // If we apply the scroll position immediately, it will be reset to 0
@@ -61,11 +61,12 @@ async fn apply_current_scroll(read_state: UseRef<Option<ReaderState>>) {
     callback.forget();
 }
 
-pub(crate) fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
-    let text = cx
-        .props
-        .read_state
-        .with(|state| state.as_ref().and_then(|state| state.get_text()));
+pub fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
+    let text = cx.props.read_state.with(|state| {
+        state
+            .as_ref()
+            .and_then(crate::read_state::ReaderState::get_text)
+    });
 
     let onselect = &cx.props.onselect;
     let read_state = cx.props.read_state;
@@ -75,19 +76,20 @@ pub(crate) fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
         let read_state = read_state.clone();
 
         async move {
-            apply_current_scroll(read_state).await;
+            apply_current_scroll(read_state);
         }
     });
 
-    if let Some(text) = text {
-        cx.render(rsx! {
-            main {
-                // TODO: Properly sandbox / iframe
-                dangerous_inner_html: "{text}",
-                onclick: |_| clicked(onselect)
-            }
-        })
-    } else {
-        cx.render(rsx! {p{"No document"}})
-    }
+    text.map_or_else(
+        || cx.render(rsx! {p{"No document"}}),
+        |text| {
+            cx.render(rsx! {
+                main {
+                    // TODO: Properly sandbox / iframe
+                    dangerous_inner_html: "{text}",
+                    onclick: |_| clicked(onselect)
+                }
+            })
+        },
+    )
 }

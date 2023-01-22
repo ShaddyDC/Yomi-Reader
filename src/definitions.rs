@@ -14,7 +14,7 @@ async fn get_terms(
     db.find_terms(text, reasons).await
 }
 
-pub(crate) async fn update_defs_and_selection(
+pub async fn update_defs_and_selection(
     defs: &UseState<Vec<yomi_dict::DictEntries>>,
     db: &UseRef<Option<yomi_dict::IndexedDB>>,
     reasons: &yomi_dict::Reasons,
@@ -56,11 +56,11 @@ pub(crate) async fn update_defs_and_selection(
         }
     }
 
-    defs.set(entries)
+    defs.set(entries);
 }
 
 #[inline_props]
-pub(crate) fn definitions_component<'a>(
+pub fn definitions_component<'a>(
     cx: Scope,
     definitions: &'a Vec<yomi_dict::DictEntries>,
 ) -> Element {
@@ -96,7 +96,7 @@ pub(crate) fn definitions_component<'a>(
                             class: "list-decimal px-4",
 
                             d.entries.iter().enumerate().flat_map(|(ie, e)| {
-                                let key = ((ie as u64) << 48 | (e.term.dict_id as u64) << 32) | e.term.sequence as u64;
+                                let key = u64::try_from(ie).unwrap_or_default() << 48 | u64::from(e.term.dict_id ) << 32 | u64::from(e.term.sequence);
 
                                 e.term.glossary.iter().enumerate().map(move |(i, s)| {
                                     rsx!(

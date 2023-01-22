@@ -1,3 +1,5 @@
+#![allow(clippy::future_not_send)]
+
 mod definitions;
 mod info_state;
 mod nav;
@@ -28,7 +30,7 @@ async fn load_db(db: &UseRef<Option<yomi_dict::IndexedDB>>, info_state: &UseRef<
         db.with_mut(|db| db.replace(new_db));
         info_state.with_mut(|s| {
             if *s == InfoState::LoadDB {
-                *s = InfoState::Idle
+                *s = InfoState::Idle;
             }
         });
         log::info!("Database loaded");
@@ -80,7 +82,7 @@ async fn load_dict(
                 *s = InfoState::LoadDict(info_state::LoadDictState::AddingDictContent(
                     progress,
                     steps.total_count,
-                ))
+                ));
             });
             log::info!("DB progress {progress}/{}", steps.total_count);
 
@@ -98,7 +100,7 @@ async fn load_dict(
     }
 }
 
-fn load_doc(data: Vec<u8>, read_state: UseRef<Option<ReaderState>>) {
+fn load_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
     log::info!("Loading document");
 
     let res = EpubDoc::from_reader(Cursor::new(data.clone()));
@@ -222,7 +224,7 @@ fn app(cx: Scope) -> Element {
                             id: "book_id",
                             label: "Upload book",
                             upload_callback: move |data| {
-                                load_doc(data, read_state_tomove.clone());
+                                load_doc(data, &read_state_tomove);
                             }
                         }
                     }

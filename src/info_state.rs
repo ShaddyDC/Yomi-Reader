@@ -1,12 +1,12 @@
-#[derive(PartialEq)]
-pub(crate) enum InfoState {
+#[derive(PartialEq, Eq)]
+pub enum InfoState {
     Idle,
     LoadDB,
     LoadDict(LoadDictState),
 }
 
-#[derive(PartialEq)]
-pub(crate) enum LoadDictState {
+#[derive(PartialEq, Eq)]
+pub enum LoadDictState {
     ParsingDict,
     AddingDictIndex,
     AddingDictContent(usize, usize),

@@ -3,11 +3,11 @@ use dioxus::prelude::*;
 use crate::read_state::ReaderState;
 
 #[derive(Props)]
-pub(crate) struct NavProps<'a> {
+pub struct NavProps<'a> {
     read_state: &'a UseRef<Option<ReaderState>>,
 }
 
-pub(crate) fn nav_component<'a>(cx: Scope<'a, NavProps<'a>>) -> Element<'a> {
+pub fn nav_component<'a>(cx: Scope<'a, NavProps<'a>>) -> Element<'a> {
     let read_state = cx.props.read_state;
 
     let (current_page, page_count) = match read_state.read().as_ref() {

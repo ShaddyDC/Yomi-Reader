@@ -4,7 +4,7 @@ use std::io::Cursor;
 
 use epub::doc::EpubDoc;
 
-pub(crate) struct ReaderState {
+pub struct ReaderState {
     doc: EpubDoc<Cursor<Vec<u8>>>,
     page: usize,
     scroll_top: i32,
@@ -31,13 +31,9 @@ fn save_scroll(page: i32) {
 }
 
 impl ReaderState {
-    pub(crate) fn new(
-        mut doc: EpubDoc<Cursor<Vec<u8>>>,
-        page: usize,
-        scroll_top: i32,
-    ) -> ReaderState {
+    pub(crate) fn new(mut doc: EpubDoc<Cursor<Vec<u8>>>, page: usize, scroll_top: i32) -> Self {
         let text = doc.get_current_str().ok(); // TODO Look up errors
-        ReaderState {
+        Self {
             doc,
             page,
             scroll_top,
@@ -55,7 +51,7 @@ impl ReaderState {
         self.text.clone()
     }
 
-    pub(crate) fn get_page(&self) -> usize {
+    pub(crate) const fn get_page(&self) -> usize {
         self.page
     }
 
@@ -97,10 +93,13 @@ impl ReaderState {
         let document = window.document().expect("should have document");
 
         // TODO error handling
-        if let Some(element) = document.get_element_by_id("reader-scroll") {
-            element.set_scroll_top(self.scroll_top);
-        } else {
-            log::warn!("Couldn't get element to set scroll position");
-        }
+        document.get_element_by_id("reader-scroll").map_or_else(
+            || {
+                log::warn!("Couldn't get element to set scroll position");
+            },
+            |element| {
+                element.set_scroll_top(self.scroll_top);
+            },
+        );
     }
 }

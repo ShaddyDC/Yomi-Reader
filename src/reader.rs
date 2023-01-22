@@ -10,14 +10,14 @@ use crate::{
 };
 
 #[derive(Props)]
-pub(crate) struct ReaderProps<'a> {
+pub struct ReaderProps<'a> {
     read_state: &'a UseRef<Option<ReaderState>>,
     db: &'a UseRef<Option<yomi_dict::IndexedDB>>,
     reasons: &'a UseState<yomi_dict::Reasons>,
     info_state: &'a UseRef<InfoState>,
 }
 
-async fn save_scroll_position(read_state: UseRef<Option<ReaderState>>) {
+fn save_scroll_position(read_state: UseRef<Option<ReaderState>>) {
     let window = web_sys::window().expect("should have window");
     let document = window.document().expect("should have document");
 
@@ -32,7 +32,7 @@ async fn save_scroll_position(read_state: UseRef<Option<ReaderState>>) {
     let scroll_callback = Closure::<dyn Fn()>::new(move || {
         let offset = element_moved.scroll_top();
         if let Some(state) = read_state.write().as_mut() {
-            state.set_scroll(offset)
+            state.set_scroll(offset);
         }
     });
 
@@ -43,7 +43,7 @@ async fn save_scroll_position(read_state: UseRef<Option<ReaderState>>) {
     scroll_callback.forget();
 }
 
-pub(crate) fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a> {
+pub fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a> {
     let read_state = cx.props.read_state;
     let info_state = cx.props.info_state;
     let db = cx.props.db;
@@ -58,7 +58,7 @@ pub(crate) fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a
         let read_state = read_state.clone();
 
         async move {
-            save_scroll_position(read_state).await;
+            save_scroll_position(read_state);
         }
     });
 
