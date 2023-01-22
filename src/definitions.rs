@@ -92,13 +92,18 @@ pub(crate) fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<DictEntr
                         ol{
                             class: "list-decimal px-4",
 
-                            d.entries.iter().flat_map(|e| {
-                                // let key = ((e.term.dict_id as u64) << 32) | e.term.sequence as u64;
+                            d.entries.iter().enumerate().flat_map(|(ie, e)| {
+                                let key = ((ie as u64) << 48 | (e.term.dict_id as u64) << 32) | e.term.sequence as u64;
 
-                                e.term.glossary.iter().map(|s| {
+                                e.term.glossary.iter().enumerate().map(move |(i, s)| {
                                     rsx!(
                                         li{
-                                            key: "{s}", // TODO inefficient
+                                            // This is obviously not great, and it may lead to issues
+                                            // if the database and this list are updated mid-execution,
+                                            // but I don't expect this to be much of a problem in practice.
+                                            // We cannot just use the string itself because there may be duplicate
+                                            // definitions in the database from merged entries, and I'm undecided how I want to handle that.
+                                            key: "{key}/{i}",
 
                                             span{
                                                 class: "whitespace-pre-wrap",
