@@ -1348,7 +1348,7 @@ function initSync(module) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('yomi-reader-764f6c2d22ece006_bg.wasm', import.meta.url);
+        input = new URL('yomi-reader-3eaab791921895ed_bg.wasm', import.meta.url);
     }
     const imports = getImports();
 
