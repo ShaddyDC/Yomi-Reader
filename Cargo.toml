@@ -7,13 +7,13 @@ edition = "2021"
 
 [dependencies]
 dioxus = { version = "0.2", features = ["web"] }
-epub = "1.2"
+epub = "2"
 log = "0.4"
 wasm-logger = "0.2"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
-base64 = "0.20"
+base64 = "0"
 async-trait = "0.1"
 thiserror = "1.0"
 serde-wasm-bindgen = "0.4"

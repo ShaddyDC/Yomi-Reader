@@ -32,7 +32,7 @@ fn save_scroll(page: i32) {
 
 impl ReaderState {
     pub(crate) fn new(mut doc: EpubDoc<Cursor<Vec<u8>>>, page: usize, scroll_top: i32) -> Self {
-        let text = doc.get_current_str().ok(); // TODO Look up errors
+        let text = doc.get_current_str().map(|(s, _)| s);
         Self {
             doc,
             page,
@@ -60,9 +60,9 @@ impl ReaderState {
     }
 
     pub(crate) fn next_page(&mut self) {
-        if let Ok(()) = self.doc.go_next() {
+        if self.doc.go_next() {
             self.page = self.doc.get_current_page();
-            self.text = self.doc.get_current_str().ok();
+            self.text = self.doc.get_current_str().map(|(s, _)| s);
             save_page(self.page);
             self.set_scroll(0);
             self.apply_scroll();
@@ -70,9 +70,9 @@ impl ReaderState {
     }
 
     pub(crate) fn prev_page(&mut self) {
-        if let Ok(()) = self.doc.go_prev() {
+        if self.doc.go_prev() {
             self.page = self.doc.get_current_page();
-            self.text = self.doc.get_current_str().ok();
+            self.text = self.doc.get_current_str().map(|(s, _)| s);
             save_page(self.page);
             self.set_scroll(0);
             self.apply_scroll();

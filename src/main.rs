@@ -12,6 +12,7 @@ extern crate web_sys;
 
 use std::io::Cursor;
 
+use base64::Engine;
 use dioxus::prelude::*;
 use epub::doc::EpubDoc;
 use info_state::InfoState;
@@ -112,7 +113,7 @@ fn load_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
     if let Ok(doc) = res {
         log::info!("document read. Attempting to save to storage");
 
-        let data = base64::encode(data);
+        let data = base64::engine::general_purpose::STANDARD.encode(data);
         let window = web_sys::window().expect("should have window");
         let storage = window
             .local_storage()
@@ -137,7 +138,9 @@ fn load_stored_reader_state() -> Option<ReaderState> {
     let doc_string = storage
         .get_item("doc")
         .expect("should be able to access storage")?;
-    let doc_bytes = base64::decode(doc_string).ok()?;
+    let doc_bytes = base64::engine::general_purpose::STANDARD
+        .decode(doc_string)
+        .ok()?;
 
     let mut doc = EpubDoc::from_reader(Cursor::new(doc_bytes)).ok()?;
 
@@ -151,7 +154,7 @@ fn load_stored_reader_state() -> Option<ReaderState> {
         .expect("Should be able to access storage")?;
     let scroll_top = scroll_string.parse().ok()?;
 
-    doc.set_current_page(page).ok()?;
+    doc.set_current_page(page);
 
     Some(ReaderState::new(doc, page, scroll_top))
 }

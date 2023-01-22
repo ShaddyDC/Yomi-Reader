@@ -66,9 +66,9 @@ dependencies = [
 
 [[package]]
 name = "base64"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
+checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
 name = "bumpalo"
@@ -276,15 +276,15 @@ dependencies = [
 
 [[package]]
 name = "epub"
-version = "1.2.4"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83c5ac32621967f51e8b82def1a8a86bf4f4e4ab21b6e22f3486d42121fa6581"
+checksum = "7fbf26ca91149e4b74370a4bdc2cad9ebc9d17c0e262d6ccb65cf89b850d9779"
 dependencies = [
- "anyhow",
  "percent-encoding",
  "regex",
+ "thiserror",
  "xml-rs",
- "zip",
+ "zip 0.5.13",
 ]
 
 [[package]]
@@ -1020,7 +1020,7 @@ dependencies = [
  "thiserror",
  "wana_kana",
  "wasm-bindgen",
- "zip",
+ "zip 0.6.3",
 ]
 
 [[package]]
@@ -1041,6 +1041,18 @@ dependencies = [
  "wasm-logger",
  "web-sys",
  "yomi-dict",
+]
+
+[[package]]
+name = "zip"
+version = "0.5.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93ab48844d61251bb3835145c521d88aa4031d7139e8485990f60ca911fa0815"
+dependencies = [
+ "byteorder",
+ "crc32fast",
+ "flate2",
+ "thiserror",
 ]
 
 [[package]]
