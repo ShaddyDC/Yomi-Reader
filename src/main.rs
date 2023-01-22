@@ -21,7 +21,7 @@ use yomi_dict::DB;
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
-    dioxus::web::launch(app);
+    dioxus_web::launch(app);
 }
 
 async fn load_db(db: &UseRef<Option<yomi_dict::IndexedDB>>, info_state: &UseRef<InfoState>) {
