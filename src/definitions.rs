@@ -1,23 +1,23 @@
 use dioxus::prelude::*;
-use yomi_dict::{deinflect::Reasons, translator::DictEntries};
+use yomi_dict::DB;
 
 // This shouldn't be an issue since we only mutate the db on creation with load_db
 // https://github.com/rust-lang/rust-clippy/issues/6671
 #[allow(clippy::await_holding_refcell_ref)]
 async fn get_terms(
     text: &str,
-    reasons: &Reasons,
-    db: &UseRef<Option<yomi_dict::db::DB>>,
-) -> Result<Vec<DictEntries>, yomi_dict::YomiDictError> {
+    reasons: &yomi_dict::Reasons,
+    db: &UseRef<Option<yomi_dict::IndexedDB>>,
+) -> Result<Vec<yomi_dict::DictEntries>, yomi_dict::YomiDictError> {
     let db_ref = db.read();
     let db = db_ref.as_ref().unwrap();
-    yomi_dict::translator::get_terms(text, reasons, db).await
+    db.find_terms(text, reasons).await
 }
 
 pub(crate) async fn update_defs_and_selection(
-    defs: &UseState<Vec<DictEntries>>,
-    db: &UseRef<Option<yomi_dict::db::DB>>,
-    reasons: &Reasons,
+    defs: &UseState<Vec<yomi_dict::DictEntries>>,
+    db: &UseRef<Option<yomi_dict::IndexedDB>>,
+    reasons: &yomi_dict::Reasons,
     data: &str,
 ) {
     if db.read().is_none() {
@@ -60,7 +60,10 @@ pub(crate) async fn update_defs_and_selection(
 }
 
 #[inline_props]
-pub(crate) fn definitions_component<'a>(cx: Scope, definitions: &'a Vec<DictEntries>) -> Element {
+pub(crate) fn definitions_component<'a>(
+    cx: Scope,
+    definitions: &'a Vec<yomi_dict::DictEntries>,
+) -> Element {
     let content = if definitions.is_empty() {
         rsx!(p{"Click the first letter of an expression to look it up!"})
     } else {

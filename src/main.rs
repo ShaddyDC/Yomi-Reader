@@ -14,16 +14,17 @@ use dioxus::prelude::*;
 use epub::doc::EpubDoc;
 use info_state::InfoState;
 use read_state::ReaderState;
+use yomi_dict::DB;
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
     dioxus::web::launch(app);
 }
 
-async fn load_db(db: &UseRef<Option<yomi_dict::db::DB>>, info_state: &UseRef<InfoState>) {
+async fn load_db(db: &UseRef<Option<yomi_dict::IndexedDB>>, info_state: &UseRef<InfoState>) {
     if db.read().is_none() {
         // TODO get rid of all unwraps
-        let new_db = yomi_dict::db::DB::new("data").await.unwrap();
+        let new_db = yomi_dict::IndexedDB::new("data").await.unwrap();
         db.with_mut(|db| db.replace(new_db));
         info_state.with_mut(|s| {
             if *s == InfoState::LoadDB {
@@ -38,7 +39,7 @@ async fn load_db(db: &UseRef<Option<yomi_dict::db::DB>>, info_state: &UseRef<Inf
 // https://github.com/rust-lang/rust-clippy/issues/6671
 #[allow(clippy::await_holding_refcell_ref)]
 async fn load_dict(
-    db: &UseRef<Option<yomi_dict::db::DB>>,
+    db: &UseRef<Option<yomi_dict::IndexedDB>>,
     info_state: &UseRef<InfoState>,
     data: Vec<u8>,
 ) {
@@ -154,7 +155,7 @@ fn load_stored_reader_state() -> Option<ReaderState> {
 }
 
 fn app(cx: Scope) -> Element {
-    let reasons = use_state(&cx, yomi_dict::deinflect::inflection_reasons);
+    let reasons = use_state(&cx, yomi_dict::inflection_reasons);
 
     let db = use_ref(&cx, || None);
     let info_state = use_ref(&cx, || InfoState::LoadDB);

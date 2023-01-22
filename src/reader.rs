@@ -2,7 +2,6 @@ extern crate web_sys;
 
 use dioxus::prelude::*;
 use wasm_bindgen::{prelude::Closure, JsCast};
-use yomi_dict::deinflect::Reasons;
 
 use crate::{
     definitions::update_defs_and_selection,
@@ -13,8 +12,8 @@ use crate::{
 #[derive(Props)]
 pub(crate) struct ReaderProps<'a> {
     read_state: &'a UseRef<Option<ReaderState>>,
-    db: &'a UseRef<Option<yomi_dict::db::DB>>,
-    reasons: &'a UseState<Reasons>,
+    db: &'a UseRef<Option<yomi_dict::IndexedDB>>,
+    reasons: &'a UseState<yomi_dict::Reasons>,
     info_state: &'a UseRef<InfoState>,
 }
 
