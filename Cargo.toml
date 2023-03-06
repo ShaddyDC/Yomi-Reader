@@ -19,6 +19,7 @@ async-trait = "0.1"
 thiserror = "1.0"
 serde-wasm-bindgen = "0.4"
 serde = "1"
+regex = "1"
 
 [dependencies.yomi-dict]
 git = "https://github.com/ShaddyDC/yomi-dict"
@@ -30,6 +31,7 @@ features = [
     "Selection",
     "Window",
     "Document",
+    "Url",
     "Blob",
     "Element",
     "HtmlElement",
