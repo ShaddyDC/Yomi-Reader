@@ -79,6 +79,7 @@ fn load_to_cache(
 }
 
 fn process_text(
+    current_path: &Path,
     text: &str,
     resource_cache: &UseRef<HashMap<String, Option<String>>>,
     read_state: &UseRef<Option<ReaderState>>,
@@ -104,7 +105,21 @@ fn process_text(
         .filter_map(|cap| cap.get(1).map(|m| m.as_str()))
         .collect::<Vec<_>>();
 
-    let resource_to_file = |resource: &str| format!("item/{}", resource.trim_start_matches("../"));
+    let resource_to_file = |resource: &str| {
+        let mut path = current_path.parent().unwrap_or_else(|| Path::new("."));
+        let mut resource = resource;
+        loop {
+            // PathBuf::canonicalize would be better but isn't supported on this platform
+            let Some(rest) = resource.strip_prefix("../") else { break };
+
+            resource = rest;
+            path = path.parent().unwrap_or_else(|| Path::new("."));
+        }
+
+        let path = path.join(resource);
+
+        std::string::String::from(path.to_string_lossy())
+    };
 
     let uncached_resources = resource_cache.with(|cache| {
         all_resources
@@ -183,11 +198,18 @@ pub fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
     text.map_or_else(
         || cx.render(rsx! {p{"No document"}}),
         |text| {
+            let path = read_state.with(|state| {
+                state
+                    .as_ref()
+                    .and_then(crate::read_state::ReaderState::get_current_path)
+            });
             if processed_text.read().is_none() || known_text.read().as_ref() != Some(&text) {
-                let body = process_text(&text, resource_cache, read_state);
+                if let Some(path) = path {
+                    let body = process_text(&path, &text, resource_cache, read_state);
 
-                known_text.set(Some(text));
-                processed_text.set(Some(body));
+                    known_text.set(Some(text));
+                    processed_text.set(Some(body));
+                }
             }
 
             let body = processed_text.read().as_ref().unwrap().clone();

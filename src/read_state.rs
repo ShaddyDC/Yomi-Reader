@@ -1,6 +1,9 @@
 extern crate web_sys;
 
-use std::{io::Cursor, path::Path};
+use std::{
+    io::Cursor,
+    path::{Path, PathBuf},
+};
 
 use epub::doc::EpubDoc;
 
@@ -49,6 +52,10 @@ impl ReaderState {
 
     pub(crate) fn get_text(&self) -> Option<String> {
         self.text.clone()
+    }
+
+    pub(crate) fn get_current_path(&self) -> Option<PathBuf> {
+        self.doc.get_current_path()
     }
 
     pub(crate) fn get_resource_by_path(&mut self, path: &Path) -> Option<Vec<u8>> {
