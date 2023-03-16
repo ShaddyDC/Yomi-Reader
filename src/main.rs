@@ -119,7 +119,9 @@ fn load_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
             .local_storage()
             .expect("should be able to get storage")
             .expect("should have storage");
-        storage.set_item("doc", &data).ok();
+        if let Some(e) = storage.set_item("doc", &data).err() {
+            log::warn!("Failed saving document with {e:?}");
+        }
         storage.set_item("page", "0").ok();
         storage.set_item("scroll_top", "0").ok();
 
