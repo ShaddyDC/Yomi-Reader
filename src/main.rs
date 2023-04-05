@@ -38,10 +38,24 @@ async fn load_db(db: &UseRef<Option<yomi_dict::IndexedDB>>, info_state: &UseRef<
     }
 }
 
+async fn load_doc(db: &UseRef<Option<yomi_dict::IndexedDB>>, info_state: &UseRef<InfoState>) {
+    if db.read().is_none() {
+        // TODO get rid of all unwraps
+        let new_db = yomi_dict::IndexedDB::new("data").await.unwrap();
+        db.with_mut(|db| db.replace(new_db));
+        info_state.with_mut(|s| {
+            if *s == InfoState::LoadDB {
+                *s = InfoState::Idle;
+            }
+        });
+        log::info!("Database loaded");
+    }
+}
+
 // This shouldn't be an issue since we only mutate the db on creation with load_db
 // https://github.com/rust-lang/rust-clippy/issues/6671
 #[allow(clippy::await_holding_refcell_ref)]
-async fn load_dict(
+async fn import_dict(
     db: &UseRef<Option<yomi_dict::IndexedDB>>,
     info_state: &UseRef<InfoState>,
     data: Vec<u8>,
@@ -101,7 +115,7 @@ async fn load_dict(
     }
 }
 
-fn load_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
+fn import_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
     log::info!("Loading document");
 
     let res = EpubDoc::from_reader(Cursor::new(data.clone()));
@@ -120,6 +134,7 @@ fn load_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
             .expect("should be able to get storage")
             .expect("should have storage");
         if let Some(e) = storage.set_item("doc", &data).err() {
+            // TODO Show error to user. Maybe clear storage so previous book is not read.
             log::warn!("Failed saving document with {e:?}");
         }
         storage.set_item("page", "0").ok();
@@ -164,12 +179,13 @@ fn load_stored_reader_state() -> Option<ReaderState> {
 fn app(cx: Scope) -> Element {
     let reasons = use_state(cx, yomi_dict::inflection_reasons);
 
-    let db = use_ref(cx, || None);
+    let dict_db = use_ref(cx, || None);
+    let doc_db = use_ref(cx, || None);
     let info_state = use_ref(cx, || InfoState::LoadDB);
 
     // Cannot use async init for use_ref directly, so load database at next opportunity
     use_future(cx, (), |()| {
-        let db_tomove = db.clone();
+        let db_tomove = dict_db.clone();
         let info_state_tomove = info_state.clone();
         async move {
             load_db(&db_tomove, &info_state_tomove).await;
@@ -178,7 +194,7 @@ fn app(cx: Scope) -> Element {
 
     let read_state = use_ref(cx, load_stored_reader_state);
 
-    let db_tomove = db.clone();
+    let db_tomove = dict_db.clone();
     let read_state_tomove = read_state.clone();
     let info_state_tomove = info_state.clone();
 
@@ -217,7 +233,7 @@ fn app(cx: Scope) -> Element {
                             upload_callback: move |data|{
                                 let db_tomove = db_tomove.clone();
                                 let info_state_tomove = info_state_tomove.clone();
-                                wasm_bindgen_futures::spawn_local(async move{load_dict(&db_tomove, &info_state_tomove, data).await;});
+                                wasm_bindgen_futures::spawn_local(async move{import_dict(&db_tomove, &info_state_tomove, data).await;});
                             }
                         }
                     },
@@ -229,7 +245,7 @@ fn app(cx: Scope) -> Element {
                             id: "book_id",
                             label: "Upload book",
                             upload_callback: move |data| {
-                                load_doc(data, &read_state_tomove);
+                                import_doc(data, &read_state_tomove);
                             }
                         }
                     }
@@ -240,7 +256,7 @@ fn app(cx: Scope) -> Element {
 
                 onscroll: |_| log::info!("scroll"),
 
-                crate::reader::reader_component{ read_state: read_state, db: db, reasons: reasons, info_state: info_state }
+                crate::reader::reader_component{ read_state: read_state, db: dict_db, reasons: reasons, info_state: info_state }
             }
         }
     })
