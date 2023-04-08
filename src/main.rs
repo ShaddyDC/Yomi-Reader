@@ -172,16 +172,16 @@ fn app(cx: Scope) -> Element {
         rsx!{
             div{
                 class: "flex flex-col h-screen pb-4",
-    
+
                 header{
                     class: "flex-none",
-    
+
                     ul{
                         class: "flex",
-    
+
                         li{
                             class: "mx-auto",
-    
+
                             upload_component::upload_component{
                                 id: "dict_id",
                                 label: "Upload Dict",
@@ -194,10 +194,10 @@ fn app(cx: Scope) -> Element {
                                 }
                             }
                         },
-    
+
                         li{
                             class: "mx-auto",
-    
+
                             upload_component::upload_component{
                                 id: "book_id",
                                 label: "Upload book",
@@ -213,9 +213,9 @@ fn app(cx: Scope) -> Element {
                 }
                 div{
                     class: "flex-1 grow max-h-full overflow-y-hidden",
-    
+
                     onscroll: |_| log::info!("scroll"),
-    
+
                     crate::reader::reader_component{ read_state: read_state, db: dict_db, reasons: reasons, info_state: info_state }
                 }
             }
