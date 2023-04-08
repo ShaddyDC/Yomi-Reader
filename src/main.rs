@@ -42,7 +42,7 @@ async fn load_doc(read_state: &UseRef<Option<ReaderState>>) {
     match ReaderState::from_storage().await {
         Ok(state) => {
             read_state.set(state);
-            log::info!("Loaded doc state!")
+            log::info!("Loaded doc state!");
         }
         Err(e) => log::error!("Failed to load doc state with {e}"),
     }
@@ -117,7 +117,7 @@ async fn import_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
     match ReaderState::from_bytes(data).await {
         Ok(doc) => {
             read_state.set(Some(doc));
-            log::info!("Loaded document!")
+            log::info!("Loaded document!");
         }
         Err(e) => log::error!("Failed to load document with {e}"),
     }
@@ -159,7 +159,16 @@ fn app(cx: Scope) -> Element {
         })
         .unwrap_or_else(|| "Yomi-Reader".to_string());
 
-    let body = loading.value().map(|_|
+    let body = loading.value().map_or_else(|| rsx!{
+        div{
+            class: "flex flex-col h-screen pb-4",
+
+            div{
+                class: "flex-1 grow max-h-full overflow-y-hidden",
+
+                "Loading ..."
+            }
+        }}, |_|
         rsx!{
             div{
                 class: "flex flex-col h-screen pb-4",
@@ -211,17 +220,7 @@ fn app(cx: Scope) -> Element {
                 }
             }
         }
-    ).unwrap_or_else(|| rsx!{
-        div{
-            class: "flex flex-col h-screen pb-4",
-
-            div{
-                class: "flex-1 grow max-h-full overflow-y-hidden",
-
-                "Loading ..."
-            }
-        }
-    });
+    );
 
     cx.render(rsx! {
         title{
