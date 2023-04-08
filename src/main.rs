@@ -203,6 +203,7 @@ fn app(cx: Scope) -> Element {
                                 label: "Upload book",
                                 upload_callback: move |data| {
                                     let read_state_tomove = read_state_tomove.clone();
+                                    read_state_tomove.set(None);
                                     wasm_bindgen_futures::spawn_local(async move{
                                         import_doc(data, &read_state_tomove).await;
                                     });
