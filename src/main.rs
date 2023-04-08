@@ -12,9 +12,7 @@ extern crate web_sys;
 
 use std::io::Cursor;
 
-use base64::Engine;
 use dioxus::prelude::*;
-use epub::doc::EpubDoc;
 use info_state::InfoState;
 use read_state::ReaderState;
 use yomi_dict::DB;
@@ -38,17 +36,15 @@ async fn load_db(db: &UseRef<Option<yomi_dict::IndexedDB>>, info_state: &UseRef<
     }
 }
 
-async fn load_doc(db: &UseRef<Option<yomi_dict::IndexedDB>>, info_state: &UseRef<InfoState>) {
-    if db.read().is_none() {
-        // TODO get rid of all unwraps
-        let new_db = yomi_dict::IndexedDB::new("data").await.unwrap();
-        db.with_mut(|db| db.replace(new_db));
-        info_state.with_mut(|s| {
-            if *s == InfoState::LoadDB {
-                *s = InfoState::Idle;
-            }
-        });
-        log::info!("Database loaded");
+async fn load_doc(read_state: &UseRef<Option<ReaderState>>) {
+    log::info!("Loading doc state");
+
+    match ReaderState::from_storage().await {
+        Ok(state) => {
+            read_state.set(state);
+            log::info!("Loaded doc state!")
+        }
+        Err(e) => log::error!("Failed to load doc state with {e}"),
     }
 }
 
@@ -115,73 +111,26 @@ async fn import_dict(
     }
 }
 
-fn import_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
+async fn import_doc(data: Vec<u8>, read_state: &UseRef<Option<ReaderState>>) {
     log::info!("Loading document");
 
-    let res = EpubDoc::from_reader(Cursor::new(data.clone()));
-
-    if let Err(err) = &res {
-        log::error!("Failed to read document with error {:?}", err);
-        return;
-    }
-    if let Ok(doc) = res {
-        log::info!("document read. Attempting to save to storage");
-
-        let data = base64::engine::general_purpose::STANDARD.encode(data);
-        let window = web_sys::window().expect("should have window");
-        let storage = window
-            .local_storage()
-            .expect("should be able to get storage")
-            .expect("should have storage");
-        if let Some(e) = storage.set_item("doc", &data).err() {
-            // TODO Show error to user. Maybe clear storage so previous book is not read.
-            log::warn!("Failed saving document with {e:?}");
+    match ReaderState::from_bytes(data).await {
+        Ok(doc) => {
+            read_state.set(Some(doc));
+            log::info!("Loaded document!")
         }
-        storage.set_item("page", "0").ok();
-        storage.set_item("scroll_top", "0").ok();
-
-        read_state.set(Some(ReaderState::new(doc, 0, 0)));
-
-        log::info!("Loaded document");
+        Err(e) => log::error!("Failed to load document with {e}"),
     }
-}
-
-fn load_stored_reader_state() -> Option<ReaderState> {
-    let window = web_sys::window().expect("should have window");
-    let storage = window
-        .local_storage()
-        .expect("should be able to get storage")
-        .expect("should have storage");
-    let doc_string = storage
-        .get_item("doc")
-        .expect("should be able to access storage")?;
-    let doc_bytes = base64::engine::general_purpose::STANDARD
-        .decode(doc_string)
-        .ok()?;
-
-    let mut doc = EpubDoc::from_reader(Cursor::new(doc_bytes)).ok()?;
-
-    let page_string = storage
-        .get_item("page")
-        .expect("Should be able to access storage")?;
-    let page = page_string.parse().ok()?;
-
-    let scroll_string = storage
-        .get_item("scroll_top")
-        .expect("Should be able to access storage")?;
-    let scroll_top = scroll_string.parse().ok()?;
-
-    doc.set_current_page(page);
-
-    Some(ReaderState::new(doc, page, scroll_top))
 }
 
 fn app(cx: Scope) -> Element {
     let reasons = use_state(cx, yomi_dict::inflection_reasons);
 
     let dict_db = use_ref(cx, || None);
-    let doc_db = use_ref(cx, || None);
     let info_state = use_ref(cx, || InfoState::LoadDB);
+
+    let read_state = use_ref(cx, || None);
+    let read_state_tomove = read_state.clone();
 
     // Cannot use async init for use_ref directly, so load database at next opportunity
     use_future(cx, (), |()| {
@@ -189,10 +138,9 @@ fn app(cx: Scope) -> Element {
         let info_state_tomove = info_state.clone();
         async move {
             load_db(&db_tomove, &info_state_tomove).await;
+            load_doc(&read_state_tomove).await;
         }
     });
-
-    let read_state = use_ref(cx, load_stored_reader_state);
 
     let db_tomove = dict_db.clone();
     let read_state_tomove = read_state.clone();
@@ -233,7 +181,9 @@ fn app(cx: Scope) -> Element {
                             upload_callback: move |data|{
                                 let db_tomove = db_tomove.clone();
                                 let info_state_tomove = info_state_tomove.clone();
-                                wasm_bindgen_futures::spawn_local(async move{import_dict(&db_tomove, &info_state_tomove, data).await;});
+                                wasm_bindgen_futures::spawn_local(async move{
+                                    import_dict(&db_tomove, &info_state_tomove, data).await;
+                                });
                             }
                         }
                     },
@@ -245,7 +195,10 @@ fn app(cx: Scope) -> Element {
                             id: "book_id",
                             label: "Upload book",
                             upload_callback: move |data| {
-                                import_doc(data, &read_state_tomove);
+                                let read_state_tomove = read_state_tomove.clone();
+                                wasm_bindgen_futures::spawn_local(async move{
+                                    import_doc(data, &read_state_tomove).await;
+                                });
                             }
                         }
                     }
