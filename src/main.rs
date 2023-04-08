@@ -133,7 +133,7 @@ fn app(cx: Scope) -> Element {
     let read_state_tomove = read_state.clone();
 
     // Cannot use async init for use_ref directly, so load database at next opportunity
-    use_future(cx, (), |()| {
+    let loading = use_future(cx, (), |()| {
         let db_tomove = dict_db.clone();
         let info_state_tomove = info_state.clone();
         async move {
@@ -159,58 +159,74 @@ fn app(cx: Scope) -> Element {
         })
         .unwrap_or_else(|| "Yomi-Reader".to_string());
 
-    cx.render(rsx! {
-        title{
-            "{tile}"
-        }
-        div{
-            class: "flex flex-col h-screen pb-4",
-
-            header{
-                class: "flex-none",
-
-                ul{
-                    class: "flex",
-
-                    li{
-                        class: "mx-auto",
-
-                        upload_component::upload_component{
-                            id: "dict_id",
-                            label: "Upload Dict",
-                            upload_callback: move |data|{
-                                let db_tomove = db_tomove.clone();
-                                let info_state_tomove = info_state_tomove.clone();
-                                wasm_bindgen_futures::spawn_local(async move{
-                                    import_dict(&db_tomove, &info_state_tomove, data).await;
-                                });
+    let body = loading.value().map(|_|
+        rsx!{
+            div{
+                class: "flex flex-col h-screen pb-4",
+    
+                header{
+                    class: "flex-none",
+    
+                    ul{
+                        class: "flex",
+    
+                        li{
+                            class: "mx-auto",
+    
+                            upload_component::upload_component{
+                                id: "dict_id",
+                                label: "Upload Dict",
+                                upload_callback: move |data|{
+                                    let db_tomove = db_tomove.clone();
+                                    let info_state_tomove = info_state_tomove.clone();
+                                    wasm_bindgen_futures::spawn_local(async move{
+                                        import_dict(&db_tomove, &info_state_tomove, data).await;
+                                    });
+                                }
                             }
-                        }
-                    },
-
-                    li{
-                        class: "mx-auto",
-
-                        upload_component::upload_component{
-                            id: "book_id",
-                            label: "Upload book",
-                            upload_callback: move |data| {
-                                let read_state_tomove = read_state_tomove.clone();
-                                wasm_bindgen_futures::spawn_local(async move{
-                                    import_doc(data, &read_state_tomove).await;
-                                });
+                        },
+    
+                        li{
+                            class: "mx-auto",
+    
+                            upload_component::upload_component{
+                                id: "book_id",
+                                label: "Upload book",
+                                upload_callback: move |data| {
+                                    let read_state_tomove = read_state_tomove.clone();
+                                    wasm_bindgen_futures::spawn_local(async move{
+                                        import_doc(data, &read_state_tomove).await;
+                                    });
+                                }
                             }
                         }
                     }
                 }
+                div{
+                    class: "flex-1 grow max-h-full overflow-y-hidden",
+    
+                    onscroll: |_| log::info!("scroll"),
+    
+                    crate::reader::reader_component{ read_state: read_state, db: dict_db, reasons: reasons, info_state: info_state }
+                }
             }
+        }
+    ).unwrap_or_else(|| rsx!{
+        div{
+            class: "flex flex-col h-screen pb-4",
+
             div{
                 class: "flex-1 grow max-h-full overflow-y-hidden",
 
-                onscroll: |_| log::info!("scroll"),
-
-                crate::reader::reader_component{ read_state: read_state, db: dict_db, reasons: reasons, info_state: info_state }
+                "Loading ..."
             }
         }
+    });
+
+    cx.render(rsx! {
+        title{
+            "{tile}"
+        }
+        body
     })
 }
