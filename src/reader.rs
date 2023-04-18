@@ -17,7 +17,7 @@ pub struct ReaderProps<'a> {
     info_state: &'a UseRef<InfoState>,
 }
 
-fn save_scroll_position(read_state: UseRef<Option<ReaderState>>) {
+fn enable_scroll_callback(read_state: UseRef<Option<ReaderState>>) {
     let window = web_sys::window().expect("should have window");
     let document = window.document().expect("should have document");
 
@@ -58,7 +58,7 @@ pub fn reader_component<'a>(cx: Scope<'a, ReaderProps<'a>>) -> Element<'a> {
         let read_state = read_state.clone();
 
         async move {
-            save_scroll_position(read_state);
+            enable_scroll_callback(read_state);
         }
     });
 

@@ -13,6 +13,7 @@ pub struct ReaderState {
     page: usize,
     scroll_top: i32,
     text: Option<String>,
+    scroll_blocked: bool,
 }
 
 // TODO error checking
@@ -74,6 +75,7 @@ impl ReaderState {
             page,
             scroll_top,
             text,
+            scroll_blocked: false,
         }
     }
 
@@ -101,6 +103,10 @@ impl ReaderState {
 
     pub(crate) fn get_page_count(&self) -> usize {
         self.doc.get_num_pages()
+    }
+
+    pub(crate) fn set_scoll_blocked(&mut self, blocked: bool) {
+        self.scroll_blocked = blocked;
     }
 
     pub(crate) fn next_page(&mut self) {
@@ -187,6 +193,13 @@ impl ReaderState {
     // }
 
     pub(crate) fn set_scroll(&mut self, scroll_top: i32) {
+        if self.scroll_blocked {
+            self.scroll_blocked = false;
+            log::info!("Blocked scroll attempt");
+            self.apply_scroll();
+            return;
+        }
+
         self.scroll_top = scroll_top;
         save_scroll(scroll_top);
     }

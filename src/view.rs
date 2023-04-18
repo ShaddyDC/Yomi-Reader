@@ -160,6 +160,7 @@ fn apply_current_scroll(read_state: UseRef<Option<ReaderState>>) {
 
     let callback = Closure::<dyn Fn()>::new(move || {
         if let Some(read_state) = read_state.read().as_ref() {
+            log::info!("Calling apply");
             read_state.apply_scroll();
         }
     });
@@ -180,6 +181,7 @@ pub fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
 
     let known_text = use_ref(cx, || text.clone());
     let processed_text = use_ref(cx, || None);
+    let apply_scroll_block = use_state(cx, || false);
 
     let resource_cache = use_ref(cx, HashMap::<String, Option<String>>::new);
 
@@ -203,12 +205,34 @@ pub fn view_component<'a>(cx: Scope<'a, ViewProps<'a>>) -> Element<'a> {
                     .as_ref()
                     .and_then(crate::read_state::ReaderState::get_current_path)
             });
+
+            // Because scroll application triggers the scroll callback
+            // Potential images will only load after the processing below has passed and rendered once
+            // Therefore, we need to update the scroll position afterwards,
+            // and we need to avoid the callback saving the wrong position.
+            // Therefore, we block the callback for both renders until things have settled.
+            if *apply_scroll_block.get() {
+                apply_scroll_block.set(false);
+                let read_state = read_state.clone();
+                let window = web_sys::window().expect("should have window");
+                let callback = Closure::<dyn Fn()>::new(move || {
+                    read_state.with_mut(|state| state.as_mut().map(|s| s.set_scoll_blocked(true)));
+                });
+
+                window
+                    .set_timeout_with_callback(callback.as_ref().unchecked_ref())
+                    .unwrap();
+                callback.forget();
+            }
+
             if processed_text.read().is_none() || known_text.read().as_ref() != Some(&text) {
                 if let Some(path) = path {
                     let body = process_text(&path, &text, resource_cache, read_state);
 
                     known_text.set(Some(text));
                     processed_text.set(Some(body));
+                    read_state.with_mut(|state| state.as_mut().map(|s| s.set_scoll_blocked(true)));
+                    apply_scroll_block.set(true);
                 }
             }
 
