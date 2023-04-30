@@ -1,4 +1,4 @@
-let m,p,ls,lss,sp,d,t,c,s,sl,op,i,e,z,text,event_name,value,many,n,ns,ptr,tmpl_id,id,root,bubbles,field,len,index;const ns_cache = [];const attr = [];const evt = [];
+let m,p,ls,lss,sp,d,t,c,s,sl,op,i,e,z,text,event_name,n,field,ns,ptr,value,len,root,tmpl_id,index,many,id,bubbles;const evt = [];const ns_cache = [];const attr = [];
     class ListenerMap {
         constructor(root) {
             // bubbling events can listen at the root element
@@ -123,8 +123,36 @@ let m,p,ls,lss,sp,d,t,c,s,sl,op,i,e,z,text,event_name,value,many,n,ns,ptr,tmpl_i
             root.appendChild(els[k]);
         }
     }
+    const bool_attrs = {
+        allowfullscreen: true,
+        allowpaymentrequest: true,
+        async: true,
+        autofocus: true,
+        autoplay: true,
+        checked: true,
+        controls: true,
+        default: true,
+        defer: true,
+        disabled: true,
+        formnovalidate: true,
+        hidden: true,
+        ismap: true,
+        itemscope: true,
+        loop: true,
+        multiple: true,
+        muted: true,
+        nomodule: true,
+        novalidate: true,
+        open: true,
+        playsinline: true,
+        readonly: true,
+        required: true,
+        reversed: true,
+        selected: true,
+        truespeed: true,
+      };
     export function create(r){d=r;c=new TextDecoder('utf-8',{fatal:true})}export function update_memory(r){m=new DataView(r.buffer)}export function set_buffer(b){m=new DataView(b)}export function run(){t=m.getUint8(d,true);if(t&1){ls=m.getUint32(d+1,true)}p=ls;if(t&2){lss=m.getUint32(d+5,true)}if(t&4){sl=m.getUint32(d+9,true);if(t&8){sp=lss;s="";e=sp+(sl/4|0)*4;while(sp<e){t=m.getUint32(sp,true);s+=String.fromCharCode(t&255,(t&65280)>>8,(t&16711680)>>16,t>>24);sp+=4}while(sp<lss+sl){s+=String.fromCharCode(m.getUint8(sp++));}}else{s=c.decode(new DataView(m.buffer,lss,sl))}sp=0}for(;;){op=m.getUint32(p,true);p+=4;z=0;while(z++<4){switch(op&255){case 0:{AppendChildren(root, stack.length-1);}break;case 1:{stack.push(nodes[m.getUint32(p,true)]);}p+=4;break;case 2:id=m.getUint32(p,true);p += 4;{AppendChildren(id, m.getUint32(p,true));}p+=4;break;case 3:{stack.pop();}break;case 4:id=m.getUint32(p,true);p += 4;{root = nodes[id]; els = stack.splice(stack.length-m.getUint32(p,true)); if (root.listening) { listeners.removeAllNonBubbling(root); } root.replaceWith(...els);}p+=4;break;case 5:id=m.getUint32(p,true);p += 4;{nodes[id].after(...stack.splice(stack.length-m.getUint32(p,true)));}p+=4;break;case 6:id=m.getUint32(p,true);p += 4;{nodes[id].before(...stack.splice(stack.length-m.getUint32(p,true)));}p+=4;break;case 7:{node = nodes[m.getUint32(p,true)]; if (node !== undefined) { if (node.listening) { listeners.removeAllNonBubbling(node); } node.remove(); }}p+=4;break;case 8:{stack.push(document.createTextNode(s.substring(sp,sp+=m.getUint32(p,true))));}p+=4;break;case 9:text=s.substring(sp,sp+=m.getUint32(p,true));p += 4;{node = document.createTextNode(text); nodes[m.getUint32(p,true)] = node; stack.push(node);}p+=4;break;case 10:{node = document.createElement('pre'); node.hidden = true; stack.push(node); nodes[m.getUint32(p,true)] = node;}p+=4;break;case 11:id=m.getUint32(p,true);p += 4;i=m.getUint32(p,true);if((i&128)!=0){event_name=s.substring(sp,sp+=(i>>>8)&255);evt[i&127]=event_name;}else{event_name=evt[i&127];}node = nodes[id]; if(node.listening){node.listening += 1;}else{node.listening = 1;} node.setAttribute('data-dioxus-id', `${id}`); listeners.create(event_name, node, (i>>>16)&255);p+=3;break;case 12:i=m.getUint32(p,true);p += 3;if((i&128)!=0){event_name=s.substring(sp,sp+=(i>>>8)&255);evt[i&127]=event_name;}else{event_name=evt[i&127];}bubbles=(i>>>16)&255;{node = nodes[m.getUint32(p,true)]; node.listening -= 1; node.removeAttribute('data-dioxus-id'); listeners.remove(node, event_name, bubbles);}p+=4;break;case 13:id=m.getUint32(p,true);p += 4;{nodes[id].textContent = s.substring(sp,sp+=m.getUint32(p,true));}p+=4;break;case 14:i=m.getUint32(p,true);p += 4;if((i&128)!=0){ns=s.substring(sp,sp+=(i>>>8)&255);ns_cache[i&127]=ns;}else{ns=ns_cache[i&127];}if((i&8388608)!=0){field=s.substring(sp,sp+=i>>>24);attr[(i>>>16)&127]=field;}else{field=attr[(i>>>16)&127];}id=m.getUint32(p,true);p += 4;{node = nodes[id]; SetAttributeInner(node, field, s.substring(sp,sp+=m.getUint32(p,true)), ns);}p+=4;break;case 15:i=m.getUint32(p,true);p += 4;if((i&128)!=0){ns=s.substring(sp,sp+=(i>>>8)&255);ns_cache[i&127]=ns;}else{ns=ns_cache[i&127];}if((i&8388608)!=0){field=s.substring(sp,sp+=i>>>24);attr[(i>>>16)&127]=field;}else{field=attr[(i>>>16)&127];}{name = field;
-        node = this.nodes[m.getUint32(p,true)];
+        node = nodes[m.getUint32(p,true)];
         if (ns == "style") {
             node.style.removeProperty(name);
         } else if (ns !== null && ns !== undefined && ns !== "") {
